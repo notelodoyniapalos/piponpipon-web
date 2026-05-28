@@ -39,6 +39,21 @@ function formatExtras(extras) {
   return Object.entries(extras).map(([k, v]) => `${k}: ${v}`).join(' · ');
 }
 
+function SummaryRow({ label, value, onEdit }) {
+  return (
+    <div className="summary-row">
+      <span className="summary-row__label">{label}:</span>
+      <span className="summary-row__value">{value}</span>
+      <button
+        type="button"
+        className="summary-row__edit"
+        onClick={onEdit}
+        aria-label={`Editar ${label}`}
+      >✎</button>
+    </div>
+  );
+}
+
 export default function CartDrawer({
   open, onClose, cart, total, whatsapp, schedule, hoursLabel,
   onInc, onDec, onRemove, onClear
@@ -59,7 +74,13 @@ export default function CartDrawer({
   const [locStatus,   setLocStatus]   = useState('idle');
 
   const [step,        setStep]        = useState('name');
-  const [completed,   setCompleted]   = useState([]);
+  // sessionHistory: steps the user EXPLICITLY answered in the current drawer-open session.
+  // We only render chat history bubbles for steps in this set — so returning visitors
+  // with persisted data see a clean summary panel instead of a fake chat replay.
+  const [sessionHistory, setSessionHistory] = useState([]);
+  // editingField: if set, the user landed on this step via "✎ editar" from the summary.
+  // After answering, we return to summary instead of advancing to the next step.
+  const [editingField, setEditingField] = useState(null);
   const [invalidTimeModal, setInvalidTimeModal] = useState(false);
   const [confirmSend, setConfirmSend] = useState(null);
 
@@ -91,6 +112,9 @@ export default function CartDrawer({
   useEffect(() => {
     if (open) {
       document.body.classList.add('no-scroll');
+      // Fresh session: no chat history visible, no edit-mode active
+      setSessionHistory([]);
+      setEditingField(null);
       // Auto-jump to the first unanswered step when drawer opens
       const firstMissing = ['name','phone','orderType','delivery','time','payment'].find((s) => {
         if (s === 'name')      return !name.trim();
@@ -102,9 +126,6 @@ export default function CartDrawer({
         return false;
       }) || 'summary';
       setStep(firstMissing);
-      // mark earlier steps as completed
-      const idx = STEP_ORDER.indexOf(firstMissing);
-      setCompleted(STEP_ORDER.slice(0, idx).filter((s) => s !== 'delivery' || isDelivery));
     } else {
       document.body.classList.remove('no-scroll');
     }
@@ -125,7 +146,7 @@ export default function CartDrawer({
         chatRef.current.scrollTop = chatRef.current.scrollHeight;
       });
     }
-  }, [step, completed.length]);
+  }, [step, sessionHistory.length]);
 
   const toggleInList = (list, setList, value) => {
     setList(list.includes(value) ? list.filter((v) => v !== value) : [...list, value]);
@@ -141,15 +162,28 @@ export default function CartDrawer({
     );
   };
 
-  // Advance to next step; mark current as completed
+  // Advance to next step. If we got here via "edit from summary", jump back to summary
+  // instead of continuing the normal flow.
   const advance = (from, to) => {
-    setCompleted((prev) => [...new Set([...prev, from])]);
-    setStep(to);
+    setSessionHistory((prev) => (prev.includes(from) ? prev : [...prev, from]));
+    if (editingField === from) {
+      setEditingField(null);
+      setStep('summary');
+    } else {
+      setStep(to);
+    }
   };
 
   const goBack = (target) => {
     const idx = STEP_ORDER.indexOf(target);
-    setCompleted((prev) => prev.filter((s) => STEP_ORDER.indexOf(s) < idx));
+    setSessionHistory((prev) => prev.filter((s) => STEP_ORDER.indexOf(s) < idx));
+    setStep(target);
+  };
+
+  // Called from the summary panel's "✎ editar" buttons
+  const editField = (target) => {
+    setEditingField(target);
+    setSessionHistory([]); // we don't want any chat history on top of the edit screen
     setStep(target);
   };
 
@@ -195,7 +229,18 @@ export default function CartDrawer({
   };
 
   const empty = cart.length === 0;
-  const isCompleted = (s) => completed.includes(s) || step === 'summary' && STEP_ORDER.indexOf(s) < STEP_ORDER.indexOf('summary');
+  // A step's chat bubbles only render if the user answered it in THIS session.
+  // Returning visitors with pre-filled data don't see a fake replay — they see the summary.
+  const inHistory = (s) => sessionHistory.includes(s);
+
+  // Pretty label for the "Cuándo" summary row
+  const whenLabel = (() => {
+    if (urgent) return '⚡ Lo antes posible — URGENTE';
+    if (scheduledTime && chosenDate) return `🕐 ${formatRelative(chosenDate, now)} ${formatHM(chosenDate)}`;
+    if (reservationFor) return `📅 Reserva: ${reservationFor}`;
+    return '🕐 Lo antes posible';
+  })();
+  const dietaryLabelsList = DIETARY.filter((d) => dietary.includes(d.id)).map((d) => d.label);
 
   // ---------- Bubble renderers ----------
   const Pip = ({ children, className = '' }) => (
@@ -256,7 +301,7 @@ export default function CartDrawer({
               {/* Chat with Pipón */}
               <div className="chat">
                 {/* NAME */}
-                {isCompleted('name') ? (
+                {inHistory('name') ? (
                   <>
                     <Pip>¡Hola! Soy Pipón. Vamos a confirmar tu pedido 😋</Pip>
                     <User stepName="name">{name}</User>
@@ -280,7 +325,7 @@ export default function CartDrawer({
                 )}
 
                 {/* PHONE */}
-                {isCompleted('phone') ? (
+                {inHistory('phone') ? (
                   <>
                     <Pip>¡Mucho gusto, {name}! ¿Cuál es tu teléfono?</Pip>
                     <User stepName="phone">📱 {phone}</User>
@@ -303,7 +348,7 @@ export default function CartDrawer({
                 )}
 
                 {/* ORDER TYPE */}
-                {isCompleted('orderType') ? (
+                {inHistory('orderType') ? (
                   <>
                     <Pip>¿Cómo recibís el pedido?</Pip>
                     <User stepName="orderType">{isDelivery ? '🛵 Delivery' : '🏪 Retiro en local'}</User>
@@ -319,7 +364,7 @@ export default function CartDrawer({
                 )}
 
                 {/* DELIVERY (only if delivery) */}
-                {isDelivery && isCompleted('delivery') ? (
+                {isDelivery && inHistory('delivery') ? (
                   <>
                     <Pip>¿A qué dirección lo llevamos?</Pip>
                     <User stepName="delivery">
@@ -361,7 +406,7 @@ export default function CartDrawer({
                 )}
 
                 {/* TIME */}
-                {isCompleted('time') ? (
+                {inHistory('time') ? (
                   <>
                     <Pip>¿Para cuándo lo querés?</Pip>
                     <User stepName="time">
@@ -406,7 +451,7 @@ export default function CartDrawer({
                 )}
 
                 {/* PAYMENT */}
-                {isCompleted('payment') ? (
+                {inHistory('payment') ? (
                   <>
                     <Pip>¿Cómo vas a pagar?</Pip>
                     <User stepName="payment">{payment === 'Transferencia' ? '🏦 Transferencia' : '💵 Efectivo'}</User>
@@ -422,7 +467,7 @@ export default function CartDrawer({
                 )}
 
                 {/* CONDIMENTOS */}
-                {isCompleted('condimentos') ? (
+                {inHistory('condimentos') ? (
                   <>
                     <Pip>¿Sumamos algún condimento?</Pip>
                     <User stepName="condimentos">{condimentos.length ? condimentos.join(', ') : '— sin condimentos'}</User>
@@ -448,7 +493,7 @@ export default function CartDrawer({
                 )}
 
                 {/* DIETARY */}
-                {isCompleted('dietary') ? (
+                {inHistory('dietary') ? (
                   <>
                     <Pip>¿Alguna preferencia o restricción?</Pip>
                     <User stepName="dietary">
@@ -478,7 +523,7 @@ export default function CartDrawer({
                 )}
 
                 {/* NOTES */}
-                {isCompleted('notes') ? (
+                {inHistory('notes') ? (
                   <>
                     <Pip>¿Algo más para aclararnos?</Pip>
                     <User stepName="notes">{notes.trim() || '— sin aclaraciones'}</User>
@@ -500,18 +545,32 @@ export default function CartDrawer({
                 {/* SUMMARY */}
                 {step === 'summary' && (
                   <>
-                    <Pip>¡Listo {name}! Mirá cómo queda tu pedido 👇</Pip>
-                    <Pip className="bubble--summary">
-                      <div className="summary-grid">
-                        <div><strong>Total:</strong> {formatPrice(total)}</div>
-                        <div><strong>Pago:</strong> {payment === 'Transferencia' ? '🏦 Transferencia' : '💵 Efectivo'}</div>
-                        <div><strong>Tipo:</strong> {isDelivery ? '🛵 Delivery' : '🏪 Retiro'}</div>
-                        <div>
-                          <strong>Cuándo:</strong>{' '}
-                          {urgent ? '⚡ URGENTE' : (scheduledTime ? `${formatRelative(chosenDate, now)} ${formatHM(chosenDate)}` : (reservationFor ? `Reserva ${reservationFor}` : 'Lo antes posible'))}
+                    <Pip>{name ? `¡Listo ${name}!` : '¡Listo!'} Revisá tu pedido 👇</Pip>
+                    <div className="bubble bubble--pip bubble--summary-card">
+                      <img src="/logo-icon.svg" alt="" className="bubble__avatar" />
+                      <div className="bubble__body">
+                        <SummaryRow label="Nombre"      value={name || '—'}                            onEdit={() => editField('name')} />
+                        <SummaryRow label="Teléfono"    value={phone || '—'}                           onEdit={() => editField('phone')} />
+                        <SummaryRow label="Tipo"        value={isDelivery ? '🛵 Delivery' : '🏪 Retiro en local'} onEdit={() => editField('orderType')} />
+                        {isDelivery && (
+                          <SummaryRow
+                            label="Dirección"
+                            value={address || (location ? '📍 Ubicación adjunta' : '—')}
+                            onEdit={() => editField('delivery')}
+                          />
+                        )}
+                        <SummaryRow label="Cuándo"      value={whenLabel}                              onEdit={() => editField('time')} />
+                        <SummaryRow label="Pago"        value={payment === 'Transferencia' ? '🏦 Transferencia' : (payment ? '💵 Efectivo' : '—')} onEdit={() => editField('payment')} />
+                        <SummaryRow label="Condimentos" value={condimentos.length ? condimentos.join(', ') : '—'} onEdit={() => editField('condimentos')} />
+                        <SummaryRow label="Preferencias" value={dietaryLabelsList.length ? dietaryLabelsList.join(', ') : '—'} onEdit={() => editField('dietary')} />
+                        <SummaryRow label="Notas"       value={notes.trim() || '—'}                    onEdit={() => editField('notes')} />
+
+                        <div className="summary-total">
+                          <span>Total:</span>
+                          <strong>{formatPrice(total)}</strong>
                         </div>
                       </div>
-                    </Pip>
+                    </div>
                     {payment === 'Transferencia' && (
                       <Pip className="bubble--alert">
                         💡 Como vas a pagar por <strong>transferencia</strong>, después de enviar el pedido vas a tener que mandarnos el <strong>comprobante</strong> por el mismo WhatsApp para que entre a la cocina.

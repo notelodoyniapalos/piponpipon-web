@@ -18,6 +18,19 @@
   },
   "categories": [
     {
+      "id": "menu-del-dia",
+      "name": "Menú del Día",
+      "icon": "📅",
+      "items": [
+        {
+          "id": "menu-dia-1",
+          "name": "Plato del Día",
+          "price": 15000,
+          "description": "Cambia día a día. Editá este ítem desde el admin con el plato de hoy."
+        }
+      ]
+    },
+    {
       "id": "promos",
       "name": "Promos",
       "icon": "⭐",
@@ -31,19 +44,6 @@
             { "label": "Tarta", "options": ["Pollo al Verdeo", "Espinaca, Brócoli y Queso", "Jamón y Queso", "Choclo", "Vegetales Asados"], "required": true },
             { "label": "Ensalada", "options": ["César", "Atún", "Completa", "Completa con Pollo", "Lacar"], "required": true }
           ]
-        }
-      ]
-    },
-    {
-      "id": "menu-del-dia",
-      "name": "Menú del Día",
-      "icon": "📅",
-      "items": [
-        {
-          "id": "menu-dia-1",
-          "name": "Plato del Día",
-          "price": 15000,
-          "description": "Cambia día a día. Editá este ítem desde el admin con el plato de hoy."
         }
       ]
     },
