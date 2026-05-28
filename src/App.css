@@ -2716,6 +2716,119 @@ body.no-scroll { overflow: hidden; }
 .dash-card--clients:hover { border-color: #60a5fa; }
 .dash-card--stats:hover   { border-color: #c084fc; }
 
+/* ---------- Admin: Clientes ---------- */
+.cli { display: flex; flex-direction: column; gap: 12px; }
+
+.cli-summary {
+  display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 12px;
+}
+.cli-summary__cell { text-align: center; }
+.cli-summary__num { font-size: 18px; font-weight: 800; }
+.cli-summary__lbl { font-size: 11px; color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: 0.5px; }
+
+.cli-list { display: flex; flex-direction: column; gap: 8px; }
+.cli-row {
+  display: flex; align-items: stretch; gap: 8px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  transition: border-color 0.15s ease;
+}
+.cli-row:hover { border-color: var(--color-primary); }
+.cli-row__main {
+  flex: 1; min-width: 0;
+  background: transparent;
+  border: none;
+  text-align: left;
+  padding: 12px;
+  cursor: pointer;
+  display: flex; flex-direction: column; gap: 3px;
+  color: var(--color-text);
+}
+.cli-row__name { font-weight: 700; font-size: 15px; }
+.cli-row__meta { font-size: 12px; color: var(--color-text-secondary); }
+.cli-row__addr { font-size: 12px; color: var(--color-text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cli-row__wa {
+  display: flex; align-items: center; justify-content: center;
+  background: var(--color-whatsapp);
+  color: #fff;
+  text-decoration: none;
+  width: 52px;
+  font-size: 22px;
+  flex: 0 0 52px;
+  transition: background 0.15s;
+}
+.cli-row__wa:hover { background: var(--color-whatsapp-dark); }
+
+.cli-detail__grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 8px 14px;
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+@media (max-width: 460px) { .cli-detail__grid { grid-template-columns: 1fr; } }
+
+.cli-orders { display: flex; flex-direction: column; gap: 8px; }
+.cli-order {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+.cli-order__head {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 4px;
+}
+.cli-order__date { font-size: 12px; color: var(--color-text-secondary); flex: 1; }
+.cli-order__type { font-size: 14px; }
+.cli-order__total { font-size: 13px; font-weight: 700; color: var(--color-primary); }
+.cli-order__items { list-style: none; margin: 0; padding: 0; font-size: 12px; color: var(--color-text); }
+.cli-order__items li { padding: 1px 0; }
+
+/* ---------- Admin: Estadísticas ---------- */
+.stats { display: flex; flex-direction: column; gap: 12px; }
+
+.kpi-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+}
+@media (min-width: 600px) { .kpi-grid { grid-template-columns: repeat(4, 1fr); } }
+.kpi-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 14px 12px;
+  text-align: center;
+}
+.kpi-card__value { font-size: 22px; font-weight: 800; line-height: 1.1; }
+.kpi-card__label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--color-text-secondary);
+  margin-top: 4px;
+}
+
+.stat-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 14px;
+}
+.stat-card__title { font-size: 14px; font-weight: 700; color: var(--color-primary); margin-bottom: 2px; }
+.stat-card__hint { font-size: 11px; color: var(--color-text-secondary); margin-bottom: 12px; }
+.stat-card__body { width: 100%; }
+
+.stats-grid-2 {
+  display: grid; grid-template-columns: 1fr; gap: 12px;
+}
+@media (min-width: 600px) { .stats-grid-2 { grid-template-columns: 1fr 1fr; } }
+
+.stat-map { width: 100%; }
+.stat-map .leaflet-container { background: #1a1a1a; }
+
 .admin__placeholder {
   background: var(--color-surface);
   border: 1px dashed var(--color-border);

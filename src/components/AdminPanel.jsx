@@ -1,9 +1,13 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, lazy, Suspense } from 'react';
 import { loadMenuData, saveMenuData, resetMenuData, getBundledMenuData, hasOverride } from '../utils/menuData.js';
 import { compressImage, formatBytes } from '../utils/imageCompress.js';
 import { supabase, supabaseEnabled } from '../utils/supabaseClient.js';
 import { itemPhotoUrl } from '../utils/itemPhotos.js';
 import { shareMenuDelDia } from '../utils/share.js';
+
+// Lazy load — these pull in recharts + leaflet which would bloat the client bundle
+const ClientesSection = lazy(() => import('./admin/ClientesSection.jsx'));
+const StatsSection    = lazy(() => import('./admin/StatsSection.jsx'));
 
 const DAYS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 
@@ -369,7 +373,7 @@ export default function AdminPanel({ onExit, onSaved }) {
     );
   }
 
-  // ===== Placeholder sections (Chunk 3 las completa) =====
+  // ===== Clientes / Stats (lazy-loaded) =====
   if (section === 'clientes') {
     return (
       <div className="admin">
@@ -379,11 +383,9 @@ export default function AdminPanel({ onExit, onSaved }) {
             <button className="btn-secondary" onClick={() => setSection('dashboard')}>← Volver</button>
           </div>
         </header>
-        <div className="admin__placeholder">
-          <p>🚧 <strong>Próximamente</strong></p>
-          <p>Acá vas a ver la lista de todos los clientes que pidieron — nombre, teléfono, historial de pedidos, total gastado y plato favorito. Se construye automáticamente a partir de los pedidos que se envían por WhatsApp.</p>
-          <p className="muted">Requiere agregar una tabla de "orders" en Supabase + logging desde el carrito. Vamos por eso después del editor de menú.</p>
-        </div>
+        <Suspense fallback={<div className="admin__placeholder"><p>Cargando…</p></div>}>
+          <ClientesSection />
+        </Suspense>
       </div>
     );
   }
@@ -397,11 +399,9 @@ export default function AdminPanel({ onExit, onSaved }) {
             <button className="btn-secondary" onClick={() => setSection('dashboard')}>← Volver</button>
           </div>
         </header>
-        <div className="admin__placeholder">
-          <p>🚧 <strong>Próximamente</strong></p>
-          <p>Acá vas a ver gráficos: platos más vendidos del día/semana/mes, ticket promedio, horas pico, % delivery vs. retiro, mejores clientes, condimentos más pedidos, etc.</p>
-          <p className="muted">Mismo requisito que Clientes (tabla orders).</p>
-        </div>
+        <Suspense fallback={<div className="admin__placeholder"><p>Cargando gráficos y mapa…</p></div>}>
+          <StatsSection />
+        </Suspense>
       </div>
     );
   }
