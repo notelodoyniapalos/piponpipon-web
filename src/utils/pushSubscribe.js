@@ -1,6 +1,7 @@
 import { supabase, supabaseEnabled } from './supabaseClient.js';
 
-const VAPID_PUBLIC = import.meta.env.VITE_VAPID_PUBLIC_KEY;
+// Strip whitespace / newlines that may have been pasted into the env var by accident
+const VAPID_PUBLIC = (import.meta.env.VITE_VAPID_PUBLIC_KEY || '').replace(/\s/g, '');
 
 // Standard helper to convert the URL-safe base64 VAPID public key into the
 // Uint8Array that PushManager.subscribe expects.
@@ -30,6 +31,7 @@ export async function ensurePushSubscription() {
     console.warn('[push] aborted: VITE_VAPID_PUBLIC_KEY no está en el bundle');
     return { ok: false, reason: 'no-vapid-key' };
   }
+  console.log('[push] VAPID key (len=' + VAPID_PUBLIC.length + '):', VAPID_PUBLIC);
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
     console.warn('[push] aborted: navegador no soporta PushManager');
     return { ok: false, reason: 'unsupported' };
