@@ -1876,6 +1876,33 @@ select optgroup {
 /* No-scroll when drawer open */
 body.no-scroll { overflow: hidden; }
 
+/* ---------- Update banner ---------- */
+.update-banner {
+  position: fixed;
+  left: 50%;
+  bottom: 90px;
+  transform: translateX(-50%);
+  z-index: 180;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--color-surface);
+  border: 1.5px solid var(--color-primary);
+  color: var(--color-text);
+  padding: 10px 14px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: 0 12px 28px rgba(0,0,0,0.5), 0 0 0 1px rgba(242,121,0,0.25);
+  animation: bubble-in 0.25s ease-out;
+  max-width: calc(100% - 32px);
+}
+.update-banner button {
+  padding: 6px 14px;
+  font-size: 13px;
+  border-radius: 999px;
+}
+
 /* ---------- Modal ---------- */
 .modal-backdrop {
   position: fixed; inset: 0;

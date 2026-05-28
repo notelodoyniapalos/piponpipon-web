@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useReducer, useState, useCallback } from 'react';
+import { useRegisterSW } from 'virtual:pwa-register/react';
 import { loadMenuData, fetchLiveMenuData, hasOverride } from './utils/menuData.js';
 import { incrementVisit, shouldTrigger } from './utils/visitCounter.js';
 import Header from './components/Header.jsx';
@@ -58,7 +59,23 @@ function isAdminHash() {
   return typeof window !== 'undefined' && window.location.hash.replace(/^#\/?/, '').toLowerCase() === 'admin';
 }
 
+// Service worker auto-update — checks every 60s while app is open
+function useAppUpdate() {
+  const { needRefresh: [needRefresh], updateServiceWorker } = useRegisterSW({
+    immediate: true,
+    onRegisteredSW(_url, r) {
+      if (!r) return;
+      setInterval(() => {
+        if (r.installing || (navigator && !navigator.onLine)) return;
+        r.update();
+      }, 60_000);
+    }
+  });
+  return { needRefresh, update: () => updateServiceWorker(true) };
+}
+
 export default function App() {
+  const { needRefresh, update } = useAppUpdate();
   const [route, setRoute] = useState(() => (isAdminHash() ? 'admin' : 'menu'));
   const [menuData, setMenuData] = useState(() => loadMenuData());
   const [cart, dispatch] = useReducer(cartReducer, undefined, loadInitialCart);
@@ -290,6 +307,13 @@ export default function App() {
         onClose={() => setIncoming(null)}
         onOpenCart={openDrawer}
       />
+
+      {needRefresh && (
+        <div className="update-banner" role="alert">
+          <span>✨ Hay una versión nueva de la app</span>
+          <button className="btn-primary" onClick={update}>Actualizar</button>
+        </div>
+      )}
 
       {lightbox && (
         <div className="lightbox" onClick={closeLightbox} role="dialog" aria-modal="true">
