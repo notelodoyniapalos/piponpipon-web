@@ -21,7 +21,16 @@ function uniqueId(base, taken) {
   return `${id}-${i}`;
 }
 
+const SECTIONS = {
+  dashboard: { title: 'Administración' },
+  notif:     { title: '📢 Enviar notificación' },
+  menu:      { title: '🍽️ Editar menú' },
+  clientes:  { title: '👥 Clientes' },
+  stats:     { title: '📊 Estadísticas' }
+};
+
 export default function AdminPanel({ onExit, onSaved }) {
+  const [section, setSection] = useState('dashboard');
   const [data, setData] = useState(() => structuredClone(loadMenuData()));
   const [savedFlash, setSavedFlash] = useState(false);
   const [query, setQuery] = useState('');
@@ -302,18 +311,99 @@ export default function AdminPanel({ onExit, onSaved }) {
   };
 
   // ---------- Render ----------
+  // ===== Dashboard view =====
+  if (section === 'dashboard') {
+    return (
+      <div className="admin">
+        <header className="admin__header">
+          <h1>Administración</h1>
+          <div className="admin__actions">
+            <button className="btn-secondary" onClick={onExit}>← Volver a la app</button>
+          </div>
+        </header>
+
+        <div className="dash-grid">
+          <button className="dash-card dash-card--notif" onClick={() => setSection('notif')}>
+            <div className="dash-card__icon">📢</div>
+            <div className="dash-card__title">Enviar notificación</div>
+            <div className="dash-card__hint">A todos los clientes conectados</div>
+          </button>
+
+          <button className="dash-card dash-card--menu" onClick={() => setSection('menu')}>
+            <div className="dash-card__icon">🍽️</div>
+            <div className="dash-card__title">Editar menú online</div>
+            <div className="dash-card__hint">Platos, precios, fotos, horarios</div>
+          </button>
+
+          <button className="dash-card dash-card--clients" onClick={() => setSection('clientes')}>
+            <div className="dash-card__icon">👥</div>
+            <div className="dash-card__title">Clientes</div>
+            <div className="dash-card__hint">Nombres, teléfonos, historial</div>
+          </button>
+
+          <button className="dash-card dash-card--stats" onClick={() => setSection('stats')}>
+            <div className="dash-card__icon">📊</div>
+            <div className="dash-card__title">Estadísticas</div>
+            <div className="dash-card__hint">Platos más pedidos y métricas</div>
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ===== Placeholder sections (Chunk 3 las completa) =====
+  if (section === 'clientes') {
+    return (
+      <div className="admin">
+        <header className="admin__header">
+          <h1>{SECTIONS.clientes.title}</h1>
+          <div className="admin__actions">
+            <button className="btn-secondary" onClick={() => setSection('dashboard')}>← Volver</button>
+          </div>
+        </header>
+        <div className="admin__placeholder">
+          <p>🚧 <strong>Próximamente</strong></p>
+          <p>Acá vas a ver la lista de todos los clientes que pidieron — nombre, teléfono, historial de pedidos, total gastado y plato favorito. Se construye automáticamente a partir de los pedidos que se envían por WhatsApp.</p>
+          <p className="muted">Requiere agregar una tabla de "orders" en Supabase + logging desde el carrito. Vamos por eso después del editor de menú.</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (section === 'stats') {
+    return (
+      <div className="admin">
+        <header className="admin__header">
+          <h1>{SECTIONS.stats.title}</h1>
+          <div className="admin__actions">
+            <button className="btn-secondary" onClick={() => setSection('dashboard')}>← Volver</button>
+          </div>
+        </header>
+        <div className="admin__placeholder">
+          <p>🚧 <strong>Próximamente</strong></p>
+          <p>Acá vas a ver gráficos: platos más vendidos del día/semana/mes, ticket promedio, horas pico, % delivery vs. retiro, mejores clientes, condimentos más pedidos, etc.</p>
+          <p className="muted">Mismo requisito que Clientes (tabla orders).</p>
+        </div>
+      </div>
+    );
+  }
+
+  // ===== Notif + Menu sections (mantienen el código actual) =====
   return (
     <div className="admin">
       <header className="admin__header">
-        <h1>Administración del menú</h1>
+        <h1>{SECTIONS[section].title}</h1>
         <div className="admin__actions">
-          <button className="btn-secondary" onClick={onExit}>← Volver al menú</button>
-          <button className="btn-primary" onClick={save}>
-            {savedFlash ? '✓ Guardado' : 'Guardar cambios'}
-          </button>
+          <button className="btn-secondary" onClick={() => setSection('dashboard')}>← Volver</button>
+          {section === 'menu' && (
+            <button className="btn-primary" onClick={save}>
+              {savedFlash ? '✓ Guardado' : 'Guardar cambios'}
+            </button>
+          )}
         </div>
       </header>
 
+      {section === 'menu' && <>
       <div className="admin__warning">
         Los cambios se guardan en este navegador. Para que el cambio sea visible para los
         clientes, hacé clic en <strong>Exportar JSON</strong> y reemplazá el archivo
@@ -406,6 +496,9 @@ export default function AdminPanel({ onExit, onSaved }) {
         ))}
       </section>
 
+      </>}
+
+      {section === 'notif' && (
       <section className="admin__section admin__section--notif">
         <div className="admin__section-header">
           <h2>📢 Enviar notificación en vivo</h2>
@@ -477,7 +570,9 @@ export default function AdminPanel({ onExit, onSaved }) {
           </details>
         )}
       </section>
+      )}
 
+      {section === 'menu' && <>
       <section className="admin__section">
         <div className="admin__section-header">
           <h2>Categorías y platos</h2>
@@ -641,6 +736,7 @@ export default function AdminPanel({ onExit, onSaved }) {
           {savedFlash ? '✓ Cambios guardados (en este navegador)' : 'Guardar cambios'}
         </button>
       </div>
+      </>}
     </div>
   );
 }
