@@ -339,7 +339,6 @@ export default function CartDrawer({
                         onChange={(e) => setName(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && submitName()}
                         placeholder="Ej: María"
-                        autoFocus
                       />
                       <button className="btn-primary" onClick={submitName} disabled={!name.trim()}>Continuar</button>
                     </div>
@@ -362,7 +361,6 @@ export default function CartDrawer({
                         onChange={(e) => setPhone(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && submitPhone()}
                         placeholder="Ej: 2944 123456"
-                        autoFocus
                       />
                       <button className="btn-primary" onClick={submitPhone} disabled={!phone.trim()}>Continuar</button>
                     </div>
@@ -404,7 +402,6 @@ export default function CartDrawer({
                         value={address}
                         onChange={(e) => setAddress(e.target.value)}
                         placeholder="Calle, número, barrio"
-                        autoFocus
                       />
                       <input
                         type="text"

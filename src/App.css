@@ -874,6 +874,98 @@ select optgroup {
   cursor: pointer;
 }
 
+/* ---------- CustomSelect (popover inline, sin picker nativo del SO) ---------- */
+.custom-select {
+  position: relative;
+  width: 100%;
+}
+.custom-select__trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: var(--color-surface-2);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 9px 12px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+  text-align: left;
+}
+.custom-select__trigger:hover { border-color: rgba(242, 121, 0, 0.5); }
+.custom-select__trigger.open {
+  border-color: var(--color-primary);
+  background: var(--color-bg);
+}
+.custom-select__value {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.custom-select__caret {
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  flex: 0 0 auto;
+  transition: transform 0.15s ease, color 0.15s ease;
+}
+.custom-select__trigger.open .custom-select__caret {
+  transform: rotate(180deg);
+  color: var(--color-primary);
+}
+.custom-select__menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  background: var(--color-bg);
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-sm);
+  list-style: none;
+  margin: 0;
+  padding: 4px;
+  max-height: 240px;
+  overflow-y: auto;
+  box-shadow: 0 12px 32px rgba(0,0,0,0.55), 0 0 0 1px rgba(242,121,0,0.2);
+  animation: cs-in 0.14s ease-out;
+}
+@keyframes cs-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.custom-select__option {
+  padding: 9px 12px;
+  font-size: 14px;
+  cursor: pointer;
+  border-radius: 6px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-text);
+  transition: background 0.1s ease, color 0.1s ease;
+}
+.custom-select__option:hover {
+  background: rgba(242, 121, 0, 0.15);
+  color: var(--color-primary);
+}
+.custom-select__option.selected {
+  background: rgba(242, 121, 0, 0.22);
+  color: var(--color-primary);
+  font-weight: 700;
+}
+.custom-select__check {
+  color: var(--color-primary);
+  font-size: 13px;
+  flex: 0 0 auto;
+}
+
 .card__option select:focus {
   outline: none;
   border-color: var(--color-primary);

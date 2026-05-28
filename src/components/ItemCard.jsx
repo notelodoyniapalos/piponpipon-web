@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { formatPrice } from '../utils/formatPrice.js';
 import { itemPhotoUrl } from '../utils/itemPhotos.js';
 import { categoryThumbUrl } from '../utils/categoryPhotos.js';
+import CustomSelect from './CustomSelect.jsx';
 import { makeKey } from '../App.jsx';
 
 function initialExtras(item) {
@@ -73,15 +74,13 @@ export default function ItemCard({ item, categoryId, cart, onAdd, onInc, onDec, 
               <label htmlFor={`opt-${item.id}-${ex.label}`}>
                 {ex.label}:{ex.required ? '' : ' (opcional)'}
               </label>
-              <select
+              <CustomSelect
                 id={`opt-${item.id}-${ex.label}`}
                 value={(selected && selected[ex.label]) || ex.options[0]}
-                onChange={(e) => updateExtra(ex.label, e.target.value)}
-              >
-                {ex.options.map((opt) => (
-                  <option key={opt} value={opt}>{opt}</option>
-                ))}
-              </select>
+                options={ex.options}
+                onChange={(val) => updateExtra(ex.label, val)}
+                label={`${ex.label} para ${item.name}`}
+              />
             </div>
           ))}
         </div>
