@@ -1,178 +1,194 @@
 # Pipón Pipón — Planning
 
-Roadmap viviente del proyecto. Lo cierra mente.
+Roadmap viviente. Actualizado **2026-05-28**.
 
 ---
 
 ## ✅ Hecho
 
-### Base
-- Vite + React + CSS plano con variables del brand (#F27900 orange, #111 bg, #1C1C1C surface)
-- Mobile-first (375px → 768px+ en grid 2 cols)
-- Inter de Google Fonts
-- Header sticky con logo SVG (cluster #3 del logo.svg original, lockup wide)
-- CategoryNav sticky horizontal scroll con auto-active según `IntersectionObserver`
-- MenuSection con hero image curado de Unsplash por categoría
-- ItemCard con thumb único por plato (LoremFlickr con seed = hash de item.id, fallback a Unsplash de la categoría si falla)
-- Footer con créditos "Diseñado por www.patagoniacreativa.net" → link a wa.me/5492257652436 + link admin (#admin)
+### Base + UX (sesiones anteriores)
+- React + Vite + CSS variables, mobile-first, sin lib UI
+- Header con logo recortado del SVG original (cluster #3 banda inferior)
+- StatusBanner con auto-refresh
+- Buscador en el hero (reemplazó tagline/chips/CTA)
+- Categorías + items con foto única por plato (LoremFlickr + fallback Unsplash)
+- Promos y Menú del Día como primeras 2 categorías
+- ItemCard con foto clickable → lightbox 300%
+- Botón "Receta + Video" → modal Cliente ORO con `context="recipe"`
+- Cliente ORO popup con heartbeat + link real a canal WhatsApp
+- PWA instalable (manifest + iconos PNG generados con sharp)
+- Botón "Instalar la App PRO" en popup (beforeinstallprompt)
+- Notificaciones LOCALES (in-page) + campana en header con estado
+- Admin panel completo: CRUD categorías/items/extras, search, photo upload con compresión, export/import JSON, reset
+- Carrito conversacional con Pipón (avatar logo-icon.svg, burbujas chat, summary editable)
+- Form data persistido en localStorage hasta envío
+- WhatsApp message BMP-safe (sin emojis 4-byte que rompen WhatsApp Desktop)
+- Schedule estructurado + validación horario manual con modal
+- Forma de pago (Efectivo/Transferencia) con recordatorio de comprobante
+- Condimentos + preferencias dietéticas
+- Modal confirmación pre-WhatsApp
 
-### Carrito (flujo conversacional)
-- `CartDrawer` reescrito como chat con avatar de Pipón (logo-icon.svg)
-- Burbujas de pregunta (izquierda con avatar) + respuesta (derecha en gradient naranja con chip "✎ editar")
-- Pasos: nombre → teléfono → tipo (Delivery/Retiro) → dirección/referencia/ubicación (si delivery) → cuándo (datetime-local + checkbox urgente) → pago (Efectivo/Transferencia) → condimentos → preferencias dietéticas → notas → summary
-- Skip-smart: si vuelve a abrir el drawer y tiene datos persistidos, salta directo al primer paso sin contestar
-- Validación de horario con modal "no disponible"
-- Modal de confirmación pre-WhatsApp con aviso de comprobante si pago = transferencia
-- Botón "¡Lo quiero YA!" (urgent) ⚡ con animación pulse
+### Sesión de hoy (2026-05-27 → 28)
 
-### WhatsApp message
-- BMP-only symbols (▸ • ─) para evitar el bug de WhatsApp Desktop Windows con 4-byte UTF-8
-- Incluye: urgente/reserva header, datos del cliente, dirección + ubicación Google Maps, preferencias, pago, items con extras, condimentos, total, notas
+**Fixes UX**
+- ✅ Bug del chat: ahora `sessionHistory` solo trackea pasos respondidos EN la sesión actual; returning visitors van directo a summary limpio con botones ✎ editar por campo
+- ✅ Menú del Día → primera categoría (antes Promos)
+- ✅ Después de enviar WhatsApp: **wipe TOTAL** (cart + nombre + tel + dirección + pago + condimentos + preferencias + notas + horario + historial chat) y **auto-cierre del drawer**
+- ✅ CustomSelect inline component (reemplazó `<select>` nativo) — el dropdown ahora se abre **dentro de la card**, no como picker del SO
+- ✅ Removido `autoFocus` de los inputs del CartDrawer (ya no abre el teclado solo al abrir el carrito)
+- ✅ Fix botón "Continuar" cortado en pantallas angostas (`min-width: 0` + drop avatar offset en ≤380px)
+- ✅ Botón verde "Hacer pedido por WhatsApp" allow wrap + tamaño menor en ≤360px
 
-### Schedule + status
-- Schedule estructurado en `menu-data.json → business.schedule`
-- `StatusBanner` arriba del hero que se re-renderiza cada 30s (open / closing-soon / partial mostrador / closed)
-- Pre-orden automática si el cliente intenta pedir fuera de horario
-- Selector de hora manual `<input type="datetime-local">` con validación
+**Infra: GitHub + Vercel**
+- ✅ Repo creado `notelodoyniapalos/piponpipon-web` (público)
+- ✅ Push inicial + auto-deploy en Vercel `piponpipon-web` (free, Hobby plan)
+- ✅ Env vars en Vercel: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_VAPID_PUBLIC_KEY`
+- ✅ Custom domain pendiente — usuario decidió quedarse con `piponpipon-web.vercel.app` por ahora (el cliente final comprará dominio propio después)
 
-### Buscador
-- Reemplazó el hero antiguo (tagline, chips, "Cómo pedimos")
-- Filtra por nombre y descripción de plato
-- Categorías sin matches se ocultan (nav + secciones)
-- Empty state cuando no hay resultados
+**Supabase backend**
+- ✅ Project `PiponPipon` creado (region US West, no hace falta migrar)
+- ✅ Tabla `notifications` con Realtime habilitado + 4 RLS policies permisivas
+- ✅ Tabla `push_subscriptions` con RLS permisivo
+- ✅ Edge Function `send-push` deployada (Deno + npm:web-push@3.6.7)
+- ✅ 3 secrets configurados: VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT (mailto:agaripoli@hotmail.com)
+- ✅ Edge Function envía con `urgency: 'high'` + `TTL: 60`
+- ✅ Cleanup automático de subscriptions 410/404
 
-### Categorías
-- Promos PRIMERA en el orden
-- Menú del Día (📅) como segunda categoría, con item placeholder editable
+**Frontend Realtime**
+- ✅ `@supabase/supabase-js` instalado
+- ✅ `useNotificationsRealtime` hook: suscribe al canal + replay del último notif si llegó offline
+- ✅ `IncomingNotification` component (popup top-center con animación + sound)
+- ✅ `showLocalNotification()` complementario para notif del SO (cuando app abierta)
 
-### Cliente ORO popup
-- Bubble style con avatar Pipón + heartbeat animation
-- Link real al canal: `https://whatsapp.com/channel/0029Vb8DG4b5PO0xEeGkzI1Q`
-- 4 perks: descuentos exclusivos, promos limitadas, menú del día anticipado, recetas + video
-- Bloque PRO con badge naranja: invita a instalar la App PRO
+**Push real (VAPID + Web Push)**
+- ✅ VAPID keys generadas (`npx web-push generate-vapid-keys`)
+- ✅ `injectManifest` mode en vite-plugin-pwa → custom SW en `src/sw.js`
+- ✅ SW handlers: `install` (skipWaiting), `activate` (clients.claim), `push` (showNotification), `notificationclick` (focus existing client + navigate to /#menu-del-dia)
+- ✅ `pushSubscribe.js` utility: PushManager.subscribe + upsert a Supabase
+- ✅ Auto-subscribe al activar permiso (campana + NotificationPrompt)
+- ✅ Subscribe on mount si permiso ya granted
+- ✅ Admin invoca Edge Function después de insert: `supabase.functions.invoke('send-push', { body })`
+- ✅ Admin template "Menú del Día -15%" pre-fill (título + body + auto-pick items de la categoría)
 
-### PWA
-- Manifest completo (es-AR, standalone, portrait, theme/bg colors)
-- Service worker con Workbox: precache + runtimeCaching (menu-data NetworkFirst, fotos CacheFirst 30d)
-- Íconos generados desde SVG: 192/512 regular + 192/512 maskable + 180 apple-touch + 32 favicon
-- Botón "Instalar la App PRO" en el popup ORO (beforeinstallprompt para Chromium, instrucciones para iOS)
-- Detección de standalone (ya instalada)
+**Debugging push (largo, pero resuelto)**
+- ✅ Fix: VAPID key con "Value:" prefix copiado de Vercel (93 chars en vez de 87)
+- ✅ Fix: VAPID key sin la 's' final
+- ✅ Fix: `VAPID_SUBJECT` sin prefijo `mailto:`
+- ✅ Defensive: `.replace(/\s/g, '')` en VITE_VAPID_PUBLIC_KEY
+- ✅ Console.log explícitos en `[push]` flow para debug
+- ⚠️ **Xiaomi/MIUI** no entrega push con app cerrada por battery management — requiere settings manuales del usuario
 
-### Notificaciones (LOCALES por ahora)
-- `NotificationPrompt` modal con campana sacudiéndose, aparece tras cerrar el popup ORO en primera visita
-- Permission flow vía Notification API
-- Campana en header con 4 estados (granted/denied/default/unsupported)
-- Click en campana: pide permiso si default, dispara notif de prueba si granted, instrucciones si denied
-- Dismissed flag en localStorage para no insistir si dice "ahora no"
-
-### Foto del plato
-- Click en el thumb → lightbox a pantalla completa (max 88vh)
-- Botón "📖 Receta + Video" abre el popup ORO con `context="recipe"` (gateado tras unirse al canal)
-
-### Admin panel (`#admin`)
-- Sin auth (pasa directo). Acceso desde footer o URL hash
-- Edita business info, schedule estructurado (días + horas)
-- CRUD de categorías (reorder con ↑↓, rename, icon)
-- CRUD de items con buscador (filtra por nombre/desc)
-- Extras por item (label, options csv, required)
-- Upload de foto con compresión cliente (canvas 700×700 JPEG @78%)
-- Export/Import JSON, Reset al bundled
-- Override en `localStorage` para preview local, exportar+subir para push live
-
-### Persistencia
-- `sessionStorage` para cart (reset por tab)
-- `localStorage` para form del cliente, override del menú, visit count, notif state, form data
-- `/menu-data.json` (live) gana sobre bundled cuando no hay override
-
-### Deploy
-- `.htaccess` con gzip, cache, HTTPS redirect, UTF-8
-- Documentado paso a paso para Hostinger
+**TWA / APK (intento, descartado)**
+- ✅ PWABuilder generó APK unsigned
+- ✅ Instalado Java JDK Temurin 17 vía Chocolatey
+- ✅ uber-apk-signer descargado y usado para firmar APK con debug certificate
+- ✅ `public/.well-known/assetlinks.json` con SHA256 cert fingerprint
+- ❌ **Conclusión**: TWA hereda comportamiento Chrome push, sigue afectado por MIUI battery saver. **Descartado** seguir por este camino.
 
 ---
 
-## 🔜 Próximo (no hecho aún)
+## 🔜 Próximo (sesión siguiente)
 
-### v2 — Supabase + push real
-**Propuesto, no implementado.** El usuario tiene cuenta en Supabase y Vercel. Plan:
+### Sprint 1 — Admin redesign con tabs (~1h)
+Propuesta confirmada por usuario. Reestructurar AdminPanel:
 
-1. **Supabase project** (free tier alcanza)
-   - Tabla `notifications`: `{ id, title, body, items jsonb, created_at, sound, dismissable }`
-   - Tabla `push_subscriptions`: `{ id, endpoint, p256dh, auth, user_agent, created_at }` (para v2.5 con web-push real)
-   - Habilitar Realtime en `notifications`
-   - RLS: `notifications` read público, write con service_role o auth admin
+```
+┌─ Admin Pipón Pipón                  [salir] ─┐
+├──────────────────────────────────────────────┤
+│ 📅 Hoy │ 🍽️ Menú │ 👥 Clientes │ 💬 Chat  │
+├──────────────────────────────────────────────┤
+│ (contenido de la tab activa)                 │
+└──────────────────────────────────────────────┘
+```
 
-2. **Frontend** (`@supabase/supabase-js`)
-   - Cliente con SUPABASE_URL + ANON_KEY (env vars o constantes en `src/utils/supabaseClient.js`)
-   - Al cargar la app: subscribe al channel `notifications:INSERT`
-   - On insert: muestra in-app popup (similar al de ORO) + dispara `showLocalNotification()` si permiso
-   - SW debería poder mostrar notificación incluso si la tab está backgrounded (Service Worker + postMessage)
+**Tab 1 — Hoy (Menú del Día)**:
+- Header con fecha "Lunes 28 de Mayo" + estado Publicado/Borrador
+- Tarjetas de los platos del día seleccionados (reorderables)
+- Botón "+ Sumar plato del menú" → modal con buscador de items existentes
+- Botón "+ Crear plato nuevo" → form inline rápido
+- Botón "Copiar de ayer/semana pasada" (cuando tengamos historial)
+- Campo "Mensaje para clientes" autogenerado pero editable
+- Vigencia opcional (hora desde/hasta — solo aparece visible en menú durante ese rango)
+- CTA "📢 Publicar y avisar" → 3 acciones combinadas: update menu + insert notification + invoke send-push
 
-3. **Admin** (nuevo bloque en `AdminPanel.jsx`)
-   - Sección "📢 Enviar notificación"
-   - Form: título, body, multi-select de items del menú (chips), opción "incluir total" / "incluir foto destacada"
-   - Insert directo en Supabase (con `service_role` no-recomendado en frontend, usar `auth` real o un edge function con secret)
-   - Historial de últimas N notificaciones enviadas con timestamp
+### Sprint 2 — Menú General con search-as-you-type (después de Sprint 1)
+- Buscador grande arriba (como Notion command palette)
+- Click resultado → panel lateral (drawer) con form de edición
+- Estado: Activo / Borrador / Programado (con date picker)
+- Chips horizontales por categoría debajo del search cuando no hay query
+- FAB "+ Nuevo plato" flotante
 
-4. **v2.5 — Push REAL (app cerrada)**
-   - Generar par VAPID (público + privado)
-   - Suscribir al usuario al pushManager con la VAPID public key
-   - Guardar subscription en `push_subscriptions`
-   - Supabase Edge Function `send-push` trigger en insert de `notifications`:
-     - Itera todas las subscriptions
-     - Usa `web-push` (Deno-compatible) para POST a cada endpoint
-   - SW maneja evento `push` → `self.registration.showNotification(...)`
-   - Maneja `notificationclick` → focus tab existente o abre nueva
+### Sprint 3 — Tab Clientes (requiere SQL nuevo)
+- SQL: nueva tabla `orders` (id, name, phone, order_type, address, items jsonb, total, scheduled_for, urgent, payment, notes, created_at)
+- Loggear cada "Abrir WhatsApp" del CartDrawer como insert en `orders` (lo más simple y honesto; el "envío real" no se puede confirmar sin backend)
+- Admin Tab Clientes: tabla agrupada por phone, columnas (Nombre, Teléfono, Pedidos, Total gastado, Último)
+- Click cliente → detalle con historial + stats + botón "💬 Mensaje WA"
+- Filtros: 7 días, top compradores, nuevos esta semana
 
-**Tiempo estimado**: v1 (Realtime sola) ~45min · v2 con push real ~+1.5h
+### Sprint 4 — Chat (futuro)
+- Placeholder "💬 Próximamente"
+- A más adelante: integrar WhatsApp Cloud API (Meta) para bidireccional
 
-**Requisitos del usuario**:
-- Project URL + anon public key de Supabase
+### Mejora Xiaomi (opcional, 1h)
+- Detectar MIUI en user agent
+- Mostrar modal-tutorial la primera vez que activan notif: "Para que las notif funcionen en tu Xiaomi/Poco: Configuración → Apps → Pipón → Batería sin restricciones..."
+- Botón "Abrir config de la app" (deep-link al app info de Pipón)
 
-### v3 — DB real para el menú
-- Mover `menu-data.json` de archivo estático a tablas Supabase (`categories`, `items`, `extras`, `extra_options`)
-- Backend para que el admin guarde directo (no más export/import manual)
-- Auth con email/password (o magic link) para el admin
-- Multi-rol: owner, operador, kitchen (futuro)
-- Subir fotos a Supabase Storage en vez de base64 inline (mucho más liviano para clientes)
+### Futuro lejano
 
-### v4 — Cliente PRO (post-install features)
-- Una vez que la PWA está instalada → desbloquear:
-  - Descarga de recetas (PDF + video URL) por plato
-  - Descuentos automáticos visibles (con cupón implícito)
-  - Historial de pedidos (sincronizado vía Supabase auth)
-  - "Reordenar último" en un toque
-  - Atajos en home screen (app shortcuts API)
-  - Tema personalizable
+#### v2: Capacitor (cuando crezca el cliente)
+Migrar a Capacitor para tener **app nativa real con FCM directo** — bypassea Xiaomi battery management como hacen WhatsApp/Telegram. Mantiene el código React tal cual, solo agrega un shell nativo. ~6-8h.
 
-### Otras ideas (sin prioridad asignada)
-- **Cupones / códigos de descuento** ingresables en el carrito
-- **Programa de fidelidad**: contador de pedidos por user, recompensas
-- **Multi-sucursal**: si abren otra ubicación, switcher en header
-- **Reservas reales** con calendario (no solo "para más tarde")
-- **Métricas** simples: total de pedidos por día/semana en admin
-- **WhatsApp Cloud API** (Meta) para mensajería bidireccional automatizada — gran salto
-- **Pagos online** (MercadoPago checkout) para evitar el comprobante manual
+#### v3: DB real del menú en Supabase
+Mover `menu-data.json` a tablas Supabase (`categories`, `items`, `extras`, `extra_options`). Admin escribe directo, frontend lee via Realtime. Sin más export/import manual.
+
+#### v4: Auth real en admin
+Supabase Auth (magic link o email/password). Apretar las RLS policies de `notifications` y `push_subscriptions`. Roles: owner, operador, kitchen.
+
+#### v5: Fotos en Supabase Storage
+En vez de base64 inline en JSON (que infla el bundle). Cada item.photo pasa a URL.
+
+#### v6: Cliente PRO (post-install)
+Una vez la PWA instalada, desbloquear:
+- Descarga real de recetas (PDF + video)
+- Descuentos automáticos
+- Historial de pedidos (sync via auth)
+- "Reordenar último" en 1 toque
+- App shortcuts en home screen
+
+### Ideas sin prioridad
+- Cupones / códigos de descuento
+- Programa de fidelidad (contador de pedidos, recompensas)
+- Multi-sucursal
+- Reservas con calendario
+- Métricas en admin (pedidos por día/semana)
+- WhatsApp Cloud API para mensajería bidireccional
+- Pagos online (MercadoPago)
 
 ---
 
-## ⚠️ Pendientes a revisar antes de producción real
+## ⚠️ Pendientes pre-producción
 
-- [ ] **Revertir WhatsApp testing**: `menu-data.json → business.whatsapp` de `5492257652436` (designer) a `5492944208323` (real)
-- [ ] **Visit counter**: restaurar `TRIGGER_SEQ.includes(count)` con `[1, 3, 7, 15, 31, 63, …]` (hoy retorna `true` siempre)
-- [ ] **Foto del placeholder Menú del Día**: subir una real desde admin
-- [ ] **SSL del subdominio**: confirmar Let's Encrypt activo en Hostinger
-- [ ] **Test cross-browser**: probar PWA install en Chrome Android + Safari iOS reales
-- [ ] **Test recipiente WhatsApp**: confirmar que el mensaje llega bien (sin `�`) al WhatsApp Business real del local
-- [ ] **Performance**: los 4 SVGs de logo cada uno pesa 400KB. Optimizable removiendo paths fuera del viewBox de cada variante (~80KB final c/u).
+- [ ] **WhatsApp destino real**: `business.whatsapp` de `5492257652436` → `5492944208323`
+- [ ] **Visit counter**: restaurar `shouldTrigger` con `[1, 3, 7, 15, 31, 63]`
+- [ ] **Quitar console.log de debug** en `pushSubscribe.js`
+- [ ] **Apretar RLS policies** de Supabase cuando llegue auth admin
+- [ ] **SSL** del dominio custom (cuando el cliente compre uno)
+- [ ] **Cross-browser test PWA**: Chrome Android + Safari iOS reales
+- [ ] **Foto Menú del Día**: subir real desde admin
+- [ ] **Onboarding Xiaomi**: modal con instrucciones MIUI (o dejarlo en el FAQ)
 
 ---
 
-## Decisiones tomadas (para no re-debatir)
+## Decisiones tomadas (no re-debatir)
 
-- **Sin auth en admin (por ahora)**: el usuario lo pidió explícitamente "pasa directo, después creamos usuario y password"
-- **Polling vs Realtime**: cuando llegue el momento, ir directo a Supabase Realtime (mejor que polling, ya que el usuario tiene cuenta)
-- **Hostinger vs Vercel**: Hostinger queda como hosting estático. Vercel puede ser fallback si Hostinger da problemas, pero migrar no es prioridad.
-- **Firebase descartado**: por el lado del usuario hay Supabase ya — evitamos sumar Google si no hace falta
-- **Fotos en base64 en JSON**: aceptable para MVP (~25-50KB por foto con compresión). Migrar a Supabase Storage cuando llegue v3.
-- **Sin TypeScript**: proyecto chico, vamos en JSX puro por velocidad
-- **Sin tests automatizados**: por ahora confiamos en QA manual + build pasando. Cuando crezca, agregar Vitest + Playwright.
+- **Sin auth en admin (por ahora)**: usuario explícito "pasa directo"
+- **Supabase elegido sobre Vercel para backend**: Realtime built-in
+- **Vercel para hosting** (no Hostinger): auto-deploy desde GitHub
+- **Subdominio bairescreativa.net pospuesto**: el cliente final compra dominio propio después
+- **TWA descartado**: no resuelve Xiaomi (Chrome wrapper, mismo battery issue)
+- **Capacitor pospuesto**: solo migrar cuando el volumen lo justifique
+- **Push real con VAPID + Supabase Edge Function**: free, propio, sin Google/Firebase
+- **Fotos en base64 inline en JSON**: aceptable para MVP, migrar a Storage en v5
+- **Sin TypeScript** ni tests: velocidad sobre robustez en esta fase
+- **Edge Function corre con anon JWT** (legacy "Verify JWT" toggle ON): suficiente para invocar desde frontend
