@@ -225,7 +225,24 @@ export default function CartDrawer({
   const proceedToWhatsapp = () => {
     const url = confirmSend;
     setConfirmSend(null);
-    if (url) window.open(url, '_blank', 'noopener,noreferrer');
+    if (!url) return;
+    window.open(url, '_blank', 'noopener,noreferrer');
+
+    // Order sent — wipe order-specific state so the next visit starts clean.
+    // We KEEP contact info (name, phone, orderType, address, reference, payment)
+    // so returning customers don't re-type their basics. To wipe contact too,
+    // also clear those setters here.
+    onClear();
+    setScheduledTime('');
+    setUrgent(false);
+    setCondimentos([]);
+    setDietary([]);
+    setNotes('');
+    setLocation(null);
+    setLocStatus('idle');
+    setSessionHistory([]);
+    setEditingField(null);
+    setStep('name');
   };
 
   const empty = cart.length === 0;
