@@ -1,4 +1,22 @@
+import { useRef } from 'react';
+
 export default function Header({ itemCount, onCartClick, notifState, onBellClick }) {
+  // Triple-tap on the logo opens the admin panel (replaces the visible footer link)
+  const tapCount = useRef(0);
+  const tapTimer = useRef(null);
+  const handleLogoClick = (e) => {
+    e.preventDefault();
+    tapCount.current += 1;
+    if (tapCount.current >= 3) {
+      tapCount.current = 0;
+      clearTimeout(tapTimer.current);
+      window.location.hash = 'admin';
+      return;
+    }
+    clearTimeout(tapTimer.current);
+    tapTimer.current = setTimeout(() => { tapCount.current = 0; }, 600);
+  };
+
   const state = notifState || 'default'; // 'granted' | 'denied' | 'default' | 'unsupported'
   const bellIcon = state === 'denied' ? '🔕' : '🔔';
   const bellTitle = {
@@ -11,7 +29,7 @@ export default function Header({ itemCount, onCartClick, notifState, onBellClick
   return (
     <header className="header">
       <div className="header__inner">
-        <a className="logo-link" href="#top" aria-label="Pipón Pipón — inicio">
+        <a className="logo-link" href="#top" aria-label="Pipón Pipón — inicio" onClick={handleLogoClick}>
           <img
             src="/logo-lockup.svg"
             alt="Pipón Pipón"

@@ -73,9 +73,6 @@ export default function InfoSection({ business }) {
             www.patagoniacreativa.net
           </a>
         </div>
-        <div className="footer-admin">
-          <a href="#admin" className="admin-link">⚙ Admin</a>
-        </div>
       </footer>
     </>
   );
