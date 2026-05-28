@@ -31,6 +31,7 @@ const SECTIONS = {
 
 export default function AdminPanel({ onExit, onSaved }) {
   const [section, setSection] = useState('dashboard');
+  const [menuView, setMenuView] = useState('chat'); // 'chat' | 'full' | 'modify-pick'
   const [data, setData] = useState(() => structuredClone(loadMenuData()));
   const [savedFlash, setSavedFlash] = useState(false);
   const [query, setQuery] = useState('');
@@ -141,11 +142,23 @@ export default function AdminPanel({ onExit, onSaved }) {
   };
 
   const useTemplateMenuDelDia = () => {
+    const menuCat = data.categories.find((c) => c.id === 'menu-del-dia');
+    const items = menuCat?.items || [];
+    const itemNames = items.map((i) => i.name).join(', ');
     setNotifTitle('🍽️ Menú del Día — 15% OFF');
-    setNotifBody('Ahora tenés un 15% de descuento en el Menú del Día. ¡Pedilo YA!');
-    // Auto-pick the Menú del Día category items
-    const menuDelDiaCat = data.categories.find((c) => c.id === 'menu-del-dia');
-    if (menuDelDiaCat) setNotifPicked(menuDelDiaCat.items.map((i) => i.id));
+    setNotifBody(
+      itemNames
+        ? `Hoy: ${itemNames}. ¡Pedilo YA con 15% de descuento!`
+        : 'Ahora tenés un 15% de descuento en el Menú del Día. ¡Pedilo YA!'
+    );
+    if (items.length > 0) setNotifPicked(items.map((i) => i.id));
+  };
+
+  const clearNotifForm = () => {
+    setNotifTitle('');
+    setNotifBody('');
+    setNotifPicked([]);
+    setNotifResult(null);
   };
 
   const normalizedQuery = query.trim().toLowerCase();
@@ -403,7 +416,110 @@ export default function AdminPanel({ onExit, onSaved }) {
         </div>
       </header>
 
-      {section === 'menu' && <>
+      {section === 'menu' && menuView === 'chat' && (() => {
+        const menuCat = data.categories.find((c) => c.id === 'menu-del-dia');
+        const menuCatIdx = data.categories.findIndex((c) => c.id === 'menu-del-dia');
+        return (
+          <div className="menu-chat">
+            <div className="bubble bubble--pip">
+              <img src="/logo-icon.svg" alt="" className="bubble__avatar" />
+              <div className="bubble__body">
+                ¡Hola! ¿Qué querés hacer hoy con el menú?
+              </div>
+            </div>
+
+            <div className="menu-chat__primary">
+              <div className="menu-chat__primary-label">📅 EDITAR MENÚ DEL DÍA</div>
+              {menuCat && menuCat.items.length > 0 ? (
+                <div className="mdd-items">
+                  {menuCat.items.map((it, ii) => (
+                    <div className="mdd-item" key={it.id}>
+                      <div className="mdd-item__row">
+                        <label className="mdd-field">
+                          <span>Nombre</span>
+                          <input
+                            value={it.name}
+                            onChange={(e) => updateData((d) => { d.categories[menuCatIdx].items[ii].name = e.target.value; })}
+                          />
+                        </label>
+                        <label className="mdd-field mdd-field--price">
+                          <span>Precio</span>
+                          <input
+                            type="number" min="0" step="100"
+                            value={it.price}
+                            onChange={(e) => updateData((d) => { d.categories[menuCatIdx].items[ii].price = Number(e.target.value) || 0; })}
+                          />
+                        </label>
+                      </div>
+                      <label className="mdd-field">
+                        <span>Descripción</span>
+                        <textarea
+                          rows={2}
+                          value={it.description || ''}
+                          onChange={(e) => updateData((d) => { d.categories[menuCatIdx].items[ii].description = e.target.value; })}
+                        />
+                      </label>
+                      <div className="mdd-photo">
+                        {it.photo
+                          ? <img src={it.photo} alt="" />
+                          : <span className="mdd-photo__empty">Sin foto</span>}
+                        <label className="btn-secondary mdd-photo-btn">
+                          {photoBusy === `${menuCatIdx}-${ii}` ? 'Procesando…' : (it.photo ? 'Cambiar foto' : '📷 Subir foto')}
+                          <input
+                            type="file" accept="image/*" hidden
+                            disabled={photoBusy === `${menuCatIdx}-${ii}`}
+                            onChange={(e) => { const f = e.target.files?.[0]; handlePhotoPick(menuCatIdx, ii, f); e.target.value = ''; }}
+                          />
+                        </label>
+                        <button className="btn-danger admin__small" onClick={() => removeItem(menuCatIdx, ii)}>Quitar</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="muted">No hay platos en el Menú del Día todavía.</p>
+              )}
+              <button className="btn-primary mdd-add" onClick={() => addItem(menuCatIdx)}>
+                + Agregar plato al Menú del Día
+              </button>
+              <button className="btn-primary" onClick={save} style={{ marginTop: 8, width: '100%' }}>
+                {savedFlash ? '✓ Cambios guardados' : '💾 Guardar Menú del Día'}
+              </button>
+              <p className="muted" style={{ fontSize: 12, textAlign: 'center', marginTop: 8 }}>
+                Recordá exportar el JSON y subirlo al servidor para que los clientes lo vean.
+              </p>
+            </div>
+
+            <div className="bubble bubble--pip">
+              <img src="/logo-icon.svg" alt="" className="bubble__avatar" />
+              <div className="bubble__body">¿Querés tocar algo más?</div>
+            </div>
+
+            <div className="menu-chat__choices">
+              <button className="choice-btn" onClick={() => setMenuView('full')}>
+                🍽️ Editar otros platos
+              </button>
+              <button className="choice-btn" onClick={() => setMenuView('full')}>
+                📂 Categorías
+              </button>
+              <button className="choice-btn" onClick={() => setMenuView('full')}>
+                🕐 Horarios
+              </button>
+              <button className="choice-btn" onClick={() => setMenuView('full')}>
+                💼 Datos del negocio
+              </button>
+              <button className="choice-btn" onClick={() => setMenuView('full')}>
+                📁 Exportar / Importar JSON
+              </button>
+            </div>
+          </div>
+        );
+      })()}
+
+      {section === 'menu' && menuView === 'full' && <>
+      <div className="admin__btn-row" style={{ marginBottom: 12 }}>
+        <button className="btn-secondary" onClick={() => setMenuView('chat')}>← Volver al menú simple</button>
+      </div>
       <div className="admin__warning">
         Los cambios se guardan en este navegador. Para que el cambio sea visible para los
         clientes, hacé clic en <strong>Exportar JSON</strong> y reemplazá el archivo
@@ -509,22 +625,35 @@ export default function AdminPanel({ onExit, onSaved }) {
           </div>
         )}
 
-        <div className="admin__btn-row" style={{ marginBottom: 8 }}>
-          <button type="button" className="btn-secondary" onClick={useTemplateMenuDelDia}>
-            📅 Usar template "Menú del Día -15%"
+        <div className="notif-templates">
+          <div className="notif-templates__label">⚡ Atajo</div>
+          <button type="button" className="btn-primary notif-template-btn" onClick={useTemplateMenuDelDia}>
+            📅 Menú del Día -15% (con los platos de hoy)
+          </button>
+          <button type="button" className="btn-secondary notif-template-btn" onClick={clearNotifForm}>
+            ✨ Personalizada (empezar de cero)
           </button>
         </div>
 
-        <div className="admin__grid admin__grid--2">
-          <label>Título <span className="admin__req">*</span>
-            <input value={notifTitle} onChange={(e) => setNotifTitle(e.target.value)}
-              placeholder="Ej: ¡Promo flash! 20% off en milanesas" />
-          </label>
-          <label>Mensaje
-            <input value={notifBody} onChange={(e) => setNotifBody(e.target.value)}
-              placeholder="Solo hasta las 14hs. Para los Cliente ORO." />
-          </label>
-        </div>
+        <label className="notif-field">
+          <span className="notif-field__label">Título <span className="admin__req">*</span></span>
+          <input
+            type="text"
+            value={notifTitle}
+            onChange={(e) => setNotifTitle(e.target.value)}
+            placeholder="Ej: ¡Promo flash! 20% off en milanesas"
+          />
+        </label>
+
+        <label className="notif-field">
+          <span className="notif-field__label">Mensaje</span>
+          <textarea
+            rows={3}
+            value={notifBody}
+            onChange={(e) => setNotifBody(e.target.value)}
+            placeholder="Solo hasta las 14hs. Para los Cliente ORO."
+          />
+        </label>
 
         <div className="notif-picker">
           <div className="notif-picker__head">
@@ -572,7 +701,7 @@ export default function AdminPanel({ onExit, onSaved }) {
       </section>
       )}
 
-      {section === 'menu' && <>
+      {section === 'menu' && menuView === 'full' && <>
       <section className="admin__section">
         <div className="admin__section-header">
           <h2>Categorías y platos</h2>
