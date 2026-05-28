@@ -2431,6 +2431,35 @@ body.no-scroll { overflow: hidden; }
   .menu-chat__choices { grid-template-columns: 1fr; margin-left: 0; }
 }
 
+.chat-pick-list {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  max-height: 320px;
+  overflow-y: auto;
+  display: flex; flex-direction: column;
+}
+.chat-pick-item {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 8px;
+  align-items: center;
+  padding: 10px 12px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--color-border);
+  text-align: left;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--color-text);
+  transition: background 0.1s ease;
+}
+.chat-pick-item:last-child { border-bottom: none; }
+.chat-pick-item:hover { background: rgba(242,121,0,0.1); }
+.chat-pick-item__cat { font-size: 11px; color: var(--color-text-secondary); }
+.chat-pick-item__name { font-weight: 600; }
+.chat-pick-item__price { color: var(--color-primary); font-weight: 700; font-size: 13px; }
+
 /* ---------- Admin: send notification ---------- */
 .admin__section--notif {
   border-color: rgba(242, 121, 0, 0.4);

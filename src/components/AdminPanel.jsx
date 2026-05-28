@@ -30,13 +30,20 @@ const SECTIONS = {
   dashboard: { title: 'Administración' },
   notif:     { title: '📢 Enviar notificación' },
   menu:      { title: '🍽️ Editar menú' },
+  business:  { title: '🏢 Mi negocio' },
   clientes:  { title: '👥 Clientes' },
   stats:     { title: '📊 Estadísticas' }
 };
 
 export default function AdminPanel({ onExit, onSaved }) {
   const [section, setSection] = useState('dashboard');
-  const [menuView, setMenuView] = useState('chat'); // 'chat' | 'full' | 'modify-pick'
+  const [menuView, setMenuView] = useState('chat'); // 'chat' | 'full'
+  // Chat flow internal state
+  const [chatStep, setChatStep] = useState('home'); // home | modify-pick | modify-field | modify-edit
+  const [chatItem, setChatItem] = useState(null); // { catIdx, itemIdx }
+  const [chatField, setChatField] = useState(null); // 'name' | 'price' | 'description' | 'photo'
+  const [chatSearch, setChatSearch] = useState('');
+  const resetChat = () => { setChatStep('home'); setChatItem(null); setChatField(null); setChatSearch(''); };
   const [data, setData] = useState(() => structuredClone(loadMenuData()));
   const [savedFlash, setSavedFlash] = useState(false);
   const [query, setQuery] = useState('');
@@ -368,6 +375,100 @@ export default function AdminPanel({ onExit, onSaved }) {
             <div className="dash-card__title">Estadísticas</div>
             <div className="dash-card__hint">Platos más pedidos y métricas</div>
           </button>
+
+          <button className="dash-card dash-card--business" onClick={() => setSection('business')}>
+            <div className="dash-card__icon">🏢</div>
+            <div className="dash-card__title">Mi negocio</div>
+            <div className="dash-card__hint">Datos, dirección, horarios, contactos</div>
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ===== Mi Negocio (datos del local + horarios) =====
+  if (section === 'business') {
+    return (
+      <div className="admin">
+        <header className="admin__header">
+          <h1>{SECTIONS.business.title}</h1>
+          <div className="admin__actions">
+            <button className="btn-secondary" onClick={() => setSection('dashboard')}>← Volver</button>
+            <button className="btn-primary" onClick={save}>{savedFlash ? '✓ Guardado' : 'Guardar'}</button>
+          </div>
+        </header>
+
+        <section className="admin__section">
+          <h2>Datos del local</h2>
+          <div className="admin__grid admin__grid--2">
+            <label>Nombre
+              <input value={data.business.name} onChange={(e) => updateData((d) => { d.business.name = e.target.value; })} />
+            </label>
+            <label>Slogan
+              <input value={data.business.slogan} onChange={(e) => updateData((d) => { d.business.slogan = e.target.value; })} />
+            </label>
+            <label>Dirección
+              <input value={data.business.address} onChange={(e) => updateData((d) => { d.business.address = e.target.value; })} />
+            </label>
+            <label>Teléfono (display)
+              <input value={data.business.phone} onChange={(e) => updateData((d) => { d.business.phone = e.target.value; })} />
+            </label>
+            <label>WhatsApp (intl, ej. 5492944208323)
+              <input value={data.business.whatsapp} onChange={(e) => updateData((d) => { d.business.whatsapp = e.target.value; })} />
+            </label>
+            <label>Instagram (sin @)
+              <input value={data.business.instagram} onChange={(e) => updateData((d) => { d.business.instagram = e.target.value; })} />
+            </label>
+            <label>Horario delivery (texto)
+              <input value={data.business.hours.delivery} onChange={(e) => updateData((d) => { d.business.hours.delivery = e.target.value; })} />
+            </label>
+            <label>Horario mostrador (texto)
+              <input value={data.business.hours.mostrador} onChange={(e) => updateData((d) => { d.business.hours.mostrador = e.target.value; })} />
+            </label>
+          </div>
+        </section>
+
+        <section className="admin__section">
+          <h2>Horarios estructurados</h2>
+          {['delivery', 'mostrador'].map((service) => (
+            <div key={service} className="admin__schedule">
+              <h3>{service === 'delivery' ? '🛵 Delivery' : '🏪 Mostrador'}</h3>
+              <div className="admin__days">
+                {DAYS.map((d, i) => {
+                  const enabled = data.business.schedule[service].days.includes(i);
+                  return (
+                    <label key={d} className={`day-chip ${enabled ? 'on' : ''}`}>
+                      <input
+                        type="checkbox"
+                        checked={enabled}
+                        onChange={(e) => updateData((nd) => {
+                          const arr = nd.business.schedule[service].days;
+                          if (e.target.checked) { if (!arr.includes(i)) arr.push(i); }
+                          else { nd.business.schedule[service].days = arr.filter((x) => x !== i); }
+                          nd.business.schedule[service].days.sort();
+                        })}
+                      />
+                      {d}
+                    </label>
+                  );
+                })}
+              </div>
+              <div className="admin__grid admin__grid--2">
+                <label>Apertura
+                  <input type="time" value={data.business.schedule[service].open}
+                    onChange={(e) => updateData((d) => { d.business.schedule[service].open = e.target.value; })} />
+                </label>
+                <label>Cierre
+                  <input type="time" value={data.business.schedule[service].close}
+                    onChange={(e) => updateData((d) => { d.business.schedule[service].close = e.target.value; })} />
+                </label>
+              </div>
+            </div>
+          ))}
+        </section>
+
+        <div className="admin__sticky-save">
+          <button className="btn-primary" onClick={save}>{savedFlash ? '✓ Guardado' : '💾 Guardar Mi Negocio'}</button>
         </div>
       </div>
     );
@@ -505,28 +606,155 @@ export default function AdminPanel({ onExit, onSaved }) {
               </p>
             </div>
 
-            <div className="bubble bubble--pip">
-              <img src="/logo-icon.svg" alt="" className="bubble__avatar" />
-              <div className="bubble__body">¿Querés tocar algo más?</div>
-            </div>
+            {chatStep === 'home' && (
+              <>
+                <div className="bubble bubble--pip">
+                  <img src="/logo-icon.svg" alt="" className="bubble__avatar" />
+                  <div className="bubble__body">¿Querés tocar algo más?</div>
+                </div>
 
-            <div className="menu-chat__choices">
-              <button className="choice-btn" onClick={() => setMenuView('full')}>
-                🍽️ Editar otros platos
-              </button>
-              <button className="choice-btn" onClick={() => setMenuView('full')}>
-                📂 Categorías
-              </button>
-              <button className="choice-btn" onClick={() => setMenuView('full')}>
-                🕐 Horarios
-              </button>
-              <button className="choice-btn" onClick={() => setMenuView('full')}>
-                💼 Datos del negocio
-              </button>
-              <button className="choice-btn" onClick={() => setMenuView('full')}>
-                📁 Exportar / Importar JSON
-              </button>
-            </div>
+                <div className="menu-chat__choices">
+                  <button className="choice-btn" onClick={() => setChatStep('modify-pick')}>
+                    ✏️ Modificar plato existente
+                  </button>
+                  <button className="choice-btn" onClick={() => setMenuView('full')}>
+                    ➕ Agregar plato / categoría
+                  </button>
+                  <button className="choice-btn" onClick={() => setMenuView('full')}>
+                    📁 Exportar / Importar JSON
+                  </button>
+                </div>
+              </>
+            )}
+
+            {chatStep === 'modify-pick' && (() => {
+              const q = chatSearch.trim().toLowerCase();
+              const flat = data.categories.flatMap((c, ci) =>
+                c.items.map((it, ii) => ({ ...it, ci, ii, catName: c.name }))
+              );
+              const filtered = q
+                ? flat.filter((it) => it.name.toLowerCase().includes(q) || it.catName.toLowerCase().includes(q))
+                : flat;
+              return (
+                <>
+                  <div className="bubble bubble--pip">
+                    <img src="/logo-icon.svg" alt="" className="bubble__avatar" />
+                    <div className="bubble__body">¿Qué plato querés modificar? Buscalo o tocalo de la lista.</div>
+                  </div>
+                  <div className="chat-form">
+                    <input
+                      type="search"
+                      value={chatSearch}
+                      onChange={(e) => setChatSearch(e.target.value)}
+                      placeholder="Buscar plato..."
+                    />
+                    <div className="chat-pick-list">
+                      {filtered.slice(0, 30).map((it) => (
+                        <button
+                          key={`${it.ci}-${it.ii}`}
+                          className="chat-pick-item"
+                          onClick={() => { setChatItem({ catIdx: it.ci, itemIdx: it.ii }); setChatStep('modify-field'); }}
+                        >
+                          <span className="chat-pick-item__cat">{it.catName}</span>
+                          <span className="chat-pick-item__name">{it.name}</span>
+                          <span className="chat-pick-item__price">${(it.price || 0).toLocaleString('es-AR')}</span>
+                        </button>
+                      ))}
+                      {filtered.length === 0 && <p className="muted" style={{ padding: '12px', textAlign: 'center' }}>Ningún plato coincide.</p>}
+                    </div>
+                    <button className="btn-secondary" onClick={resetChat}>← Volver</button>
+                  </div>
+                </>
+              );
+            })()}
+
+            {chatStep === 'modify-field' && chatItem && (() => {
+              const it = data.categories[chatItem.catIdx]?.items[chatItem.itemIdx];
+              if (!it) { resetChat(); return null; }
+              return (
+                <>
+                  <div className="bubble bubble--user">
+                    <div className="bubble__body">{it.name}</div>
+                  </div>
+                  <div className="bubble bubble--pip">
+                    <img src="/logo-icon.svg" alt="" className="bubble__avatar" />
+                    <div className="bubble__body">¿Qué querés cambiar de <strong>{it.name}</strong>?</div>
+                  </div>
+                  <div className="menu-chat__choices">
+                    <button className="choice-btn" onClick={() => setChatField('name')}>✏️ Nombre</button>
+                    <button className="choice-btn" onClick={() => setChatField('price')}>💰 Precio (${(it.price || 0).toLocaleString('es-AR')})</button>
+                    <button className="choice-btn" onClick={() => setChatField('description')}>📝 Descripción</button>
+                    <button className="choice-btn" onClick={() => setChatField('photo')}>📷 Foto</button>
+                  </div>
+                  {chatField && (
+                    <div className="chat-form" style={{ marginTop: 8 }}>
+                      {chatField === 'name' && (
+                        <>
+                          <input
+                            type="text" value={it.name}
+                            onChange={(e) => updateData((d) => { d.categories[chatItem.catIdx].items[chatItem.itemIdx].name = e.target.value; })}
+                          />
+                          <button className="btn-primary" onClick={() => { save(); setChatField(null); }}>💾 Guardar nombre</button>
+                        </>
+                      )}
+                      {chatField === 'price' && (
+                        <>
+                          <input
+                            type="number" min="0" step="100" value={it.price}
+                            onChange={(e) => updateData((d) => { d.categories[chatItem.catIdx].items[chatItem.itemIdx].price = Number(e.target.value) || 0; })}
+                          />
+                          <button className="btn-primary" onClick={() => { save(); setChatField(null); }}>💾 Guardar precio</button>
+                        </>
+                      )}
+                      {chatField === 'description' && (
+                        <>
+                          <textarea
+                            rows={3} value={it.description || ''}
+                            onChange={(e) => updateData((d) => { d.categories[chatItem.catIdx].items[chatItem.itemIdx].description = e.target.value; })}
+                          />
+                          <button className="btn-primary" onClick={() => { save(); setChatField(null); }}>💾 Guardar descripción</button>
+                        </>
+                      )}
+                      {chatField === 'photo' && (
+                        <div className="mdd-photo">
+                          {it.photo
+                            ? <img src={it.photo} alt="" />
+                            : <span className="mdd-photo__empty">Sin foto</span>}
+                          <label className="btn-secondary mdd-photo-btn">
+                            {photoBusy === `${chatItem.catIdx}-${chatItem.itemIdx}` ? 'Procesando…' : (it.photo ? 'Cambiar foto' : '📷 Subir foto')}
+                            <input
+                              type="file" accept="image/*" hidden
+                              disabled={photoBusy === `${chatItem.catIdx}-${chatItem.itemIdx}`}
+                              onChange={(e) => { const f = e.target.files?.[0]; handlePhotoPick(chatItem.catIdx, chatItem.itemIdx, f); e.target.value = ''; }}
+                            />
+                          </label>
+                          {it.photo && (
+                            <button className="btn-danger admin__small" onClick={() => removePhoto(chatItem.catIdx, chatItem.itemIdx)}>Quitar</button>
+                          )}
+                          <button className="btn-primary" style={{ width: '100%', marginTop: 8 }} onClick={() => { save(); setChatField(null); }}>💾 Guardar foto</button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  <div className="chat-form" style={{ marginTop: 12 }}>
+                    <button
+                      className="btn-danger"
+                      onClick={() => {
+                        if (confirm(`¿Eliminar "${it.name}" del menú?`)) {
+                          removeItem(chatItem.catIdx, chatItem.itemIdx);
+                          save();
+                          resetChat();
+                        }
+                      }}
+                    >
+                      🗑️ Eliminar este plato del menú
+                    </button>
+                    <button className="btn-secondary" onClick={() => { setChatField(null); setChatStep('modify-pick'); setChatItem(null); }}>← Elegir otro plato</button>
+                    <button className="btn-secondary" onClick={resetChat}>← Volver al inicio</button>
+                  </div>
+                </>
+              );
+            })()}
           </div>
         );
       })()}
@@ -552,80 +780,9 @@ export default function AdminPanel({ onExit, onSaved }) {
         </div>
       </section>
 
-      <section className="admin__section">
-        <h2>Datos del negocio</h2>
-        <div className="admin__grid">
-          <label>Nombre
-            <input value={data.business.name} onChange={(e) => updateData((d) => { d.business.name = e.target.value; })} />
-          </label>
-          <label>Slogan
-            <input value={data.business.slogan} onChange={(e) => updateData((d) => { d.business.slogan = e.target.value; })} />
-          </label>
-          <label>Dirección
-            <input value={data.business.address} onChange={(e) => updateData((d) => { d.business.address = e.target.value; })} />
-          </label>
-          <label>Teléfono (display)
-            <input value={data.business.phone} onChange={(e) => updateData((d) => { d.business.phone = e.target.value; })} />
-          </label>
-          <label>WhatsApp (intl, ej. 5492944208323)
-            <input value={data.business.whatsapp} onChange={(e) => updateData((d) => { d.business.whatsapp = e.target.value; })} />
-          </label>
-          <label>Instagram (sin @)
-            <input value={data.business.instagram} onChange={(e) => updateData((d) => { d.business.instagram = e.target.value; })} />
-          </label>
-          <label>Horario delivery (texto)
-            <input value={data.business.hours.delivery} onChange={(e) => updateData((d) => { d.business.hours.delivery = e.target.value; })} />
-          </label>
-          <label>Horario mostrador (texto)
-            <input value={data.business.hours.mostrador} onChange={(e) => updateData((d) => { d.business.hours.mostrador = e.target.value; })} />
-          </label>
-        </div>
-      </section>
-
-      <section className="admin__section">
-        <h2>Horarios (estructura)</h2>
-        {['delivery', 'mostrador'].map((service) => (
-          <div key={service} className="admin__schedule">
-            <h3>{service === 'delivery' ? '🛵 Delivery' : '🏪 Mostrador'}</h3>
-            <div className="admin__days">
-              {DAYS.map((d, i) => {
-                const enabled = data.business.schedule[service].days.includes(i);
-                return (
-                  <label key={d} className={`day-chip ${enabled ? 'on' : ''}`}>
-                    <input
-                      type="checkbox"
-                      checked={enabled}
-                      onChange={(e) => updateData((nd) => {
-                        const arr = nd.business.schedule[service].days;
-                        if (e.target.checked) { if (!arr.includes(i)) arr.push(i); }
-                        else { nd.business.schedule[service].days = arr.filter((x) => x !== i); }
-                        nd.business.schedule[service].days.sort();
-                      })}
-                    />
-                    {d}
-                  </label>
-                );
-              })}
-            </div>
-            <div className="admin__grid admin__grid--2">
-              <label>Apertura
-                <input
-                  type="time"
-                  value={data.business.schedule[service].open}
-                  onChange={(e) => updateData((d) => { d.business.schedule[service].open = e.target.value; })}
-                />
-              </label>
-              <label>Cierre
-                <input
-                  type="time"
-                  value={data.business.schedule[service].close}
-                  onChange={(e) => updateData((d) => { d.business.schedule[service].close = e.target.value; })}
-                />
-              </label>
-            </div>
-          </div>
-        ))}
-      </section>
+      <p className="muted" style={{ fontSize: 13, textAlign: 'center', marginBottom: 12 }}>
+        Los datos del negocio y horarios se editan en <strong>🏢 Mi negocio</strong> (dashboard).
+      </p>
 
       </>}
 
