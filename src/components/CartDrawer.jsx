@@ -248,6 +248,8 @@ export default function CartDrawer({
     setEditingField(null);
     setStep('name');
     try { localStorage.removeItem(FORM_KEY); } catch { /* ignore */ }
+    // Close the drawer so the user lands on the menu with a truly clean cart
+    onClose();
   };
 
   const empty = cart.length === 0;

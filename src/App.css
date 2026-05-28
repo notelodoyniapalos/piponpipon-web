@@ -1215,9 +1215,11 @@ select optgroup {
   display: flex;
   gap: 8px;
   margin: 4px 0 6px 40px;
+  min-width: 0;
 }
 .chat-input input {
-  flex: 1;
+  flex: 1 1 0;
+  min-width: 0;
   background: var(--color-surface);
   color: var(--color-text);
   border: 1px solid var(--color-border);
@@ -1226,13 +1228,25 @@ select optgroup {
   font-size: 15px;
 }
 .chat-input input:focus { outline: none; border-color: var(--color-primary); }
-.chat-input button { flex: 0 0 auto; }
+.chat-input button {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
 
 .chat-form {
   display: flex;
   flex-direction: column;
   gap: 8px;
   margin: 4px 0 6px 40px;
+  min-width: 0;
+}
+
+/* On very narrow phones drop the avatar-alignment offset so the action button
+   doesn't get squeezed off the right edge. */
+@media (max-width: 380px) {
+  .chat-input,
+  .chat-form,
+  .chat-choices { margin-left: 0; }
 }
 .chat-form input,
 .chat-form textarea {
@@ -1620,7 +1634,7 @@ select optgroup {
   color: #fff;
   font-weight: 800;
   font-size: 16px;
-  padding: 14px;
+  padding: 14px 12px;
   border-radius: var(--radius);
   display: flex;
   align-items: center;
@@ -1628,6 +1642,16 @@ select optgroup {
   gap: 8px;
   transition: background 0.15s, transform 0.1s;
   text-decoration: none;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  white-space: normal;
+  text-align: center;
+  line-height: 1.25;
+  word-break: break-word;
+}
+@media (max-width: 360px) {
+  .wa-btn { font-size: 14px; padding: 12px 10px; }
 }
 
 .wa-btn:hover { background: var(--color-whatsapp-dark); }
