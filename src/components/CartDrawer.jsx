@@ -228,11 +228,15 @@ export default function CartDrawer({
     if (!url) return;
     window.open(url, '_blank', 'noopener,noreferrer');
 
-    // Order sent — wipe order-specific state so the next visit starts clean.
-    // We KEEP contact info (name, phone, orderType, address, reference, payment)
-    // so returning customers don't re-type their basics. To wipe contact too,
-    // also clear those setters here.
+    // Order sent — wipe EVERYTHING so the next time anyone opens the cart
+    // it starts completely from scratch (contact info included).
     onClear();
+    setName('');
+    setPhone('');
+    setOrderType('');
+    setAddress('');
+    setReference('');
+    setPayment('');
     setScheduledTime('');
     setUrgent(false);
     setCondimentos([]);
@@ -243,6 +247,7 @@ export default function CartDrawer({
     setSessionHistory([]);
     setEditingField(null);
     setStep('name');
+    try { localStorage.removeItem(FORM_KEY); } catch { /* ignore */ }
   };
 
   const empty = cart.length === 0;
