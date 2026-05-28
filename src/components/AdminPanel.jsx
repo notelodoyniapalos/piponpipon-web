@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, lazy, Suspense } from 'react';
-import { loadMenuData, saveMenuData, resetMenuData, getBundledMenuData, hasOverride } from '../utils/menuData.js';
+import { loadMenuData, saveMenuToSupabase, resetMenuData, getBundledMenuData } from '../utils/menuData.js';
 import { compressImage, formatBytes } from '../utils/imageCompress.js';
 import { supabase, supabaseEnabled } from '../utils/supabaseClient.js';
 import { itemPhotoUrl } from '../utils/itemPhotos.js';
@@ -38,6 +38,8 @@ const SECTIONS = {
 export default function AdminPanel({ onExit, onSaved }) {
   const [section, setSection] = useState('dashboard');
   const [menuView, setMenuView] = useState('chat'); // 'chat' | 'full'
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState(null);
   // Chat flow internal state
   const [chatStep, setChatStep] = useState('home'); // home | modify-pick | modify-field | modify-edit
   const [chatItem, setChatItem] = useState(null); // { catIdx, itemIdx }
@@ -208,10 +210,18 @@ export default function AdminPanel({ onExit, onSaved }) {
     });
   };
 
-  const save = () => {
-    saveMenuData(data);
+  const save = async () => {
+    setSaving(true);
+    setSaveError(null);
+    const { ok, error } = await saveMenuToSupabase(data);
+    setSaving(false);
+    if (!ok) {
+      setSaveError(error || 'Error al guardar');
+      setTimeout(() => setSaveError(null), 5000);
+      return;
+    }
     setSavedFlash(true);
-    setTimeout(() => setSavedFlash(false), 2000);
+    setTimeout(() => setSavedFlash(false), 2500);
     if (onSaved) onSaved();
   };
 
@@ -394,7 +404,7 @@ export default function AdminPanel({ onExit, onSaved }) {
           <h1>{SECTIONS.business.title}</h1>
           <div className="admin__actions">
             <button className="btn-secondary" onClick={() => setSection('dashboard')}>← Volver</button>
-            <button className="btn-primary" onClick={save}>{savedFlash ? '✓ Guardado' : 'Guardar'}</button>
+            <button className="btn-primary" onClick={save} disabled={saving}>{saving ? 'Guardando…' : savedFlash ? '✓ Publicado en vivo' : 'Guardar'}</button>
           </div>
         </header>
 
@@ -468,7 +478,7 @@ export default function AdminPanel({ onExit, onSaved }) {
         </section>
 
         <div className="admin__sticky-save">
-          <button className="btn-primary" onClick={save}>{savedFlash ? '✓ Guardado' : '💾 Guardar Mi Negocio'}</button>
+          <button className="btn-primary" onClick={save}>{saving ? 'Guardando…' : savedFlash ? '✓ Publicado en vivo' : '💾 Guardar Mi Negocio'}</button>
         </div>
       </div>
     );
@@ -516,11 +526,17 @@ export default function AdminPanel({ onExit, onSaved }) {
           <button className="btn-secondary" onClick={() => setSection('dashboard')}>← Volver</button>
           {section === 'menu' && (
             <button className="btn-primary" onClick={save}>
-              {savedFlash ? '✓ Guardado' : 'Guardar cambios'}
+              {saving ? 'Guardando…' : savedFlash ? '✓ Publicado en vivo' : 'Guardar cambios'}
             </button>
           )}
         </div>
       </header>
+
+      {saveError && (
+        <div className="admin__warning" style={{ background: 'rgba(255, 107, 107, 0.12)', borderColor: '#ff6b6b', color: '#ff8a6b' }}>
+          ❌ Error al publicar: {saveError}
+        </div>
+      )}
 
       {section === 'menu' && menuView === 'chat' && (() => {
         const menuCat = data.categories.find((c) => c.id === 'menu-del-dia');
@@ -589,7 +605,7 @@ export default function AdminPanel({ onExit, onSaved }) {
                 + Agregar plato al Menú del Día
               </button>
               <button className="btn-primary" onClick={save} style={{ marginTop: 8, width: '100%' }}>
-                {savedFlash ? '✓ Cambios guardados' : '💾 Guardar Menú del Día'}
+                {saving ? 'Guardando…' : savedFlash ? '✓ Publicado en vivo' : '💾 Guardar Menú del Día'}
               </button>
               <button
                 className="btn-secondary"
@@ -602,7 +618,7 @@ export default function AdminPanel({ onExit, onSaved }) {
                 📤 Compartir Plato del Día
               </button>
               <p className="muted" style={{ fontSize: 12, textAlign: 'center', marginTop: 8 }}>
-                Recordá exportar el JSON y subirlo al servidor para que los clientes lo vean.
+                🟢 Modo en vivo: los cambios se publican al instante a todos los clientes.
               </p>
             </div>
 
@@ -763,11 +779,10 @@ export default function AdminPanel({ onExit, onSaved }) {
       <div className="admin__btn-row" style={{ marginBottom: 12 }}>
         <button className="btn-secondary" onClick={() => setMenuView('chat')}>← Volver al menú simple</button>
       </div>
-      <div className="admin__warning">
-        Los cambios se guardan en este navegador. Para que el cambio sea visible para los
-        clientes, hacé clic en <strong>Exportar JSON</strong> y reemplazá el archivo
-        <code> menu-data.json </code> en el servidor.
-        {hasOverride() && <span className="admin__pill">Hay cambios locales activos</span>}
+      <div className="admin__warning" style={{ background: 'rgba(74, 222, 128, 0.08)', borderColor: 'rgba(74, 222, 128, 0.4)' }}>
+        🟢 <strong>Modo en vivo activo.</strong> Cualquier cambio que guardes se publica al
+        instante a todos los clientes conectados (sin que tengan que refrescar).
+        Exportar/Importar JSON queda como backup opcional.
       </div>
 
       <section className="admin__section">
@@ -1034,7 +1049,7 @@ export default function AdminPanel({ onExit, onSaved }) {
 
       <div className="admin__sticky-save">
         <button className="btn-primary" onClick={save}>
-          {savedFlash ? '✓ Cambios guardados (en este navegador)' : 'Guardar cambios'}
+          {saving ? 'Guardando…' : savedFlash ? '✓ Publicado en vivo' : 'Guardar cambios'}
         </button>
       </div>
       </>}

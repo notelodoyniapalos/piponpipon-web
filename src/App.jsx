@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useReducer, useState, useCallback } from 'react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
-import { loadMenuData, fetchLiveMenuData, hasOverride } from './utils/menuData.js';
+import { loadMenuData, fetchLiveMenuData, subscribeToMenu } from './utils/menuData.js';
 import { incrementVisit, shouldTrigger } from './utils/visitCounter.js';
 import Header from './components/Header.jsx';
 import Hero from './components/Hero.jsx';
@@ -122,14 +122,15 @@ export default function App() {
     catch { /* ignore */ }
   }, [cart]);
 
-  // Pull live menu data from server (admin updates land here without rebuild)
+  // Pull live menu from Supabase + subscribe to Realtime updates.
+  // When admin saves, all open clients receive the new data instantly.
   useEffect(() => {
-    if (hasOverride()) return;
     let cancelled = false;
     fetchLiveMenuData().then((live) => {
       if (!cancelled && live) setMenuData(live);
     });
-    return () => { cancelled = true; };
+    const unsubscribe = subscribeToMenu((newData) => setMenuData(newData));
+    return () => { cancelled = true; unsubscribe(); };
   }, []);
 
   const itemCount = useMemo(() => cart.reduce((s, i) => s + i.qty, 0), [cart]);
