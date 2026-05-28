@@ -1,0 +1,26 @@
+{
+  "name": "Pipón Pipón",
+  "colors": {
+    "primary": "#F5C400",
+    "accent": "#F27900",
+    "background": "#111111",
+    "surface": "#1C1C1C",
+    "textPrimary": "#FFFFFF",
+    "textSecondary": "#AAAAAA",
+    "logoColors": ["#F27900", "#1A1A1A", "#FFFFFF"]
+  },
+  "typography": {
+    "font": "Inter",
+    "fallback": "system-ui, sans-serif"
+  },
+  "contact": {
+    "whatsapp": "5492944208323",
+    "instagram": "piponpipon.sma",
+    "phone": "414950",
+    "address": "Gregorio Álvarez y esq. Luis Borges, Vega Maipú"
+  },
+  "hours": {
+    "delivery": "Lunes a Sábados 11:00 a 15:00",
+    "mostrador": "Lunes a Sábados 09:00 a 15:00"
+  }
+}

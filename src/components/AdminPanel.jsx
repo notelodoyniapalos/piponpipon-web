@@ -1,0 +1,608 @@
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { loadMenuData, saveMenuData, resetMenuData, getBundledMenuData, hasOverride } from '../utils/menuData.js';
+import { compressImage, formatBytes } from '../utils/imageCompress.js';
+import { supabase, supabaseEnabled } from '../utils/supabaseClient.js';
+import { itemPhotoUrl } from '../utils/itemPhotos.js';
+
+const DAYS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+
+function slugify(str) {
+  return String(str || '')
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+    .slice(0, 40) || 'item-' + Date.now().toString(36);
+}
+
+function uniqueId(base, taken) {
+  let id = base || ('item-' + Date.now().toString(36));
+  if (!taken.has(id)) return id;
+  let i = 2;
+  while (taken.has(`${id}-${i}`)) i++;
+  return `${id}-${i}`;
+}
+
+export default function AdminPanel({ onExit, onSaved }) {
+  const [data, setData] = useState(() => structuredClone(loadMenuData()));
+  const [savedFlash, setSavedFlash] = useState(false);
+  const [query, setQuery] = useState('');
+  const [photoBusy, setPhotoBusy] = useState(null); // item key while compressing
+  const fileInputRef = useRef(null);
+
+  // ---------- Send-notification state ----------
+  const [notifTitle, setNotifTitle] = useState('');
+  const [notifBody, setNotifBody]   = useState('');
+  const [notifPicked, setNotifPicked] = useState([]); // array of item ids
+  const [notifSending, setNotifSending] = useState(false);
+  const [notifResult, setNotifResult]   = useState(null);
+  const [notifHistory, setNotifHistory] = useState([]);
+
+  // Flatten items for picker
+  const allItems = useMemo(() => {
+    const out = [];
+    data.categories.forEach((cat) => {
+      cat.items.forEach((it) => out.push({ ...it, categoryId: cat.id, categoryName: cat.name }));
+    });
+    return out;
+  }, [data]);
+
+  const filteredItemsForNotif = useMemo(() => {
+    const q = notifBody.trim().toLowerCase();
+    // No query needed; pick UI uses its own filter
+    return allItems;
+  }, [allItems]);
+
+  // Load history when Supabase is configured
+  useEffect(() => {
+    if (!supabaseEnabled) return;
+    (async () => {
+      const { data: rows, error } = await supabase
+        .from('notifications')
+        .select('id, title, body, items, created_at')
+        .order('created_at', { ascending: false })
+        .limit(10);
+      if (!error && Array.isArray(rows)) setNotifHistory(rows);
+    })();
+  }, [notifSending]);
+
+  const toggleNotifItem = (id) => {
+    setNotifPicked((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]));
+  };
+
+  const sendNotification = async () => {
+    setNotifResult(null);
+    if (!supabaseEnabled) {
+      setNotifResult({ ok: false, msg: 'Supabase no está configurado. Falta VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY.' });
+      return;
+    }
+    if (!notifTitle.trim()) {
+      setNotifResult({ ok: false, msg: 'El título es obligatorio.' });
+      return;
+    }
+    setNotifSending(true);
+    const itemsPayload = notifPicked
+      .map((id) => allItems.find((x) => x.id === id))
+      .filter(Boolean)
+      .map((it) => ({
+        id: it.id,
+        name: it.name,
+        price: it.price,
+        photo: it.photo || itemPhotoUrl(it.id, 120, 120),
+        categoryId: it.categoryId
+      }));
+    const { error } = await supabase.from('notifications').insert({
+      title: notifTitle.trim(),
+      body: notifBody.trim() || null,
+      items: itemsPayload.length > 0 ? itemsPayload : null,
+      sound: true
+    });
+    setNotifSending(false);
+    if (error) {
+      setNotifResult({ ok: false, msg: 'Error al enviar: ' + error.message });
+      return;
+    }
+    setNotifResult({ ok: true, msg: '✓ Enviada a todos los clientes conectados' });
+    setNotifTitle('');
+    setNotifBody('');
+    setNotifPicked([]);
+    setTimeout(() => setNotifResult(null), 4000);
+  };
+
+  const normalizedQuery = query.trim().toLowerCase();
+  const filteredCategories = useMemo(() => {
+    return data.categories.map((cat, catIdx) => {
+      if (!normalizedQuery) {
+        return { cat, catIdx, show: true, itemIds: null };
+      }
+      const catMatches = cat.name.toLowerCase().includes(normalizedQuery);
+      const matchingIds = new Set();
+      cat.items.forEach((it) => {
+        if (
+          it.name.toLowerCase().includes(normalizedQuery) ||
+          (it.description || '').toLowerCase().includes(normalizedQuery)
+        ) matchingIds.add(it.id);
+      });
+      return {
+        cat,
+        catIdx,
+        show: catMatches || matchingIds.size > 0,
+        itemIds: catMatches ? null : matchingIds
+      };
+    });
+  }, [data, normalizedQuery]);
+
+  const updateData = (mutator) => {
+    setData((cur) => {
+      const next = structuredClone(cur);
+      mutator(next);
+      return next;
+    });
+  };
+
+  const save = () => {
+    saveMenuData(data);
+    setSavedFlash(true);
+    setTimeout(() => setSavedFlash(false), 2000);
+    if (onSaved) onSaved();
+  };
+
+  const reset = () => {
+    if (!confirm('¿Descartar todos los cambios locales y volver al menú original?')) return;
+    resetMenuData();
+    setData(structuredClone(getBundledMenuData()));
+    if (onSaved) onSaved();
+  };
+
+  const exportJson = () => {
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'menu-data.json';
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a); URL.revokeObjectURL(url);
+  };
+
+  const importJson = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const parsed = JSON.parse(ev.target.result);
+        if (!parsed.business || !Array.isArray(parsed.categories)) {
+          alert('El archivo no parece un menu-data.json válido (falta business o categories).');
+          return;
+        }
+        setData(parsed);
+      } catch (err) {
+        alert('No pude leer el archivo: ' + err.message);
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
+  // ---------- Categories ----------
+  const addCategory = () => {
+    updateData((d) => {
+      const id = uniqueId('cat-' + Date.now().toString(36), new Set(d.categories.map((c) => c.id)));
+      d.categories.push({ id, name: 'Nueva categoría', icon: '🍴', items: [] });
+    });
+  };
+
+  const removeCategory = (idx) => {
+    if (!confirm('¿Eliminar esta categoría y todos sus platos?')) return;
+    updateData((d) => { d.categories.splice(idx, 1); });
+  };
+
+  const moveCategory = (idx, dir) => {
+    updateData((d) => {
+      const swap = idx + dir;
+      if (swap < 0 || swap >= d.categories.length) return;
+      const [c] = d.categories.splice(idx, 1);
+      d.categories.splice(swap, 0, c);
+    });
+  };
+
+  // ---------- Items ----------
+  const addItem = (catIdx) => {
+    updateData((d) => {
+      const taken = new Set(d.categories.flatMap((c) => c.items.map((i) => i.id)));
+      const id = uniqueId('item-' + Date.now().toString(36), taken);
+      d.categories[catIdx].items.push({ id, name: 'Nuevo plato', price: 0, description: '' });
+    });
+  };
+
+  const removeItem = (catIdx, itemIdx) => {
+    if (!confirm('¿Eliminar este plato?')) return;
+    updateData((d) => { d.categories[catIdx].items.splice(itemIdx, 1); });
+  };
+
+  const moveItem = (catIdx, itemIdx, dir) => {
+    updateData((d) => {
+      const items = d.categories[catIdx].items;
+      const swap = itemIdx + dir;
+      if (swap < 0 || swap >= items.length) return;
+      const [it] = items.splice(itemIdx, 1);
+      items.splice(swap, 0, it);
+    });
+  };
+
+  // ---------- Photo per item ----------
+  const handlePhotoPick = async (catIdx, itemIdx, file) => {
+    if (!file) return;
+    const key = `${catIdx}-${itemIdx}`;
+    setPhotoBusy(key);
+    try {
+      const { dataUrl, width, height, bytes } = await compressImage(file, {
+        maxWidth: 700, maxHeight: 700, quality: 0.78
+      });
+      updateData((d) => {
+        d.categories[catIdx].items[itemIdx].photo = dataUrl;
+        d.categories[catIdx].items[itemIdx].photoMeta = { width, height, bytes };
+      });
+    } catch (err) {
+      alert('No pude procesar la imagen: ' + err.message);
+    } finally {
+      setPhotoBusy(null);
+    }
+  };
+
+  const removePhoto = (catIdx, itemIdx) => {
+    updateData((d) => {
+      delete d.categories[catIdx].items[itemIdx].photo;
+      delete d.categories[catIdx].items[itemIdx].photoMeta;
+    });
+  };
+
+  // ---------- Extras within item ----------
+  const ensureExtras = (item) => { if (!Array.isArray(item.extras)) item.extras = []; };
+
+  const addExtra = (catIdx, itemIdx) => {
+    updateData((d) => {
+      const it = d.categories[catIdx].items[itemIdx];
+      ensureExtras(it);
+      it.extras.push({ label: 'Nueva opción', options: ['Opción 1'], required: false });
+    });
+  };
+  const removeExtra = (catIdx, itemIdx, exIdx) => {
+    updateData((d) => { d.categories[catIdx].items[itemIdx].extras.splice(exIdx, 1); });
+  };
+
+  // ---------- Render ----------
+  return (
+    <div className="admin">
+      <header className="admin__header">
+        <h1>Administración del menú</h1>
+        <div className="admin__actions">
+          <button className="btn-secondary" onClick={onExit}>← Volver al menú</button>
+          <button className="btn-primary" onClick={save}>
+            {savedFlash ? '✓ Guardado' : 'Guardar cambios'}
+          </button>
+        </div>
+      </header>
+
+      <div className="admin__warning">
+        Los cambios se guardan en este navegador. Para que el cambio sea visible para los
+        clientes, hacé clic en <strong>Exportar JSON</strong> y reemplazá el archivo
+        <code> menu-data.json </code> en el servidor.
+        {hasOverride() && <span className="admin__pill">Hay cambios locales activos</span>}
+      </div>
+
+      <section className="admin__section">
+        <h2>Archivo</h2>
+        <div className="admin__btn-row">
+          <button className="btn-secondary" onClick={exportJson}>⬇ Exportar JSON</button>
+          <button className="btn-secondary" onClick={() => fileInputRef.current.click()}>⬆ Importar JSON</button>
+          <input ref={fileInputRef} type="file" accept=".json,application/json" onChange={importJson} hidden />
+          <button className="btn-danger" onClick={reset}>↺ Restaurar original</button>
+        </div>
+      </section>
+
+      <section className="admin__section">
+        <h2>Datos del negocio</h2>
+        <div className="admin__grid">
+          <label>Nombre
+            <input value={data.business.name} onChange={(e) => updateData((d) => { d.business.name = e.target.value; })} />
+          </label>
+          <label>Slogan
+            <input value={data.business.slogan} onChange={(e) => updateData((d) => { d.business.slogan = e.target.value; })} />
+          </label>
+          <label>Dirección
+            <input value={data.business.address} onChange={(e) => updateData((d) => { d.business.address = e.target.value; })} />
+          </label>
+          <label>Teléfono (display)
+            <input value={data.business.phone} onChange={(e) => updateData((d) => { d.business.phone = e.target.value; })} />
+          </label>
+          <label>WhatsApp (intl, ej. 5492944208323)
+            <input value={data.business.whatsapp} onChange={(e) => updateData((d) => { d.business.whatsapp = e.target.value; })} />
+          </label>
+          <label>Instagram (sin @)
+            <input value={data.business.instagram} onChange={(e) => updateData((d) => { d.business.instagram = e.target.value; })} />
+          </label>
+          <label>Horario delivery (texto)
+            <input value={data.business.hours.delivery} onChange={(e) => updateData((d) => { d.business.hours.delivery = e.target.value; })} />
+          </label>
+          <label>Horario mostrador (texto)
+            <input value={data.business.hours.mostrador} onChange={(e) => updateData((d) => { d.business.hours.mostrador = e.target.value; })} />
+          </label>
+        </div>
+      </section>
+
+      <section className="admin__section">
+        <h2>Horarios (estructura)</h2>
+        {['delivery', 'mostrador'].map((service) => (
+          <div key={service} className="admin__schedule">
+            <h3>{service === 'delivery' ? '🛵 Delivery' : '🏪 Mostrador'}</h3>
+            <div className="admin__days">
+              {DAYS.map((d, i) => {
+                const enabled = data.business.schedule[service].days.includes(i);
+                return (
+                  <label key={d} className={`day-chip ${enabled ? 'on' : ''}`}>
+                    <input
+                      type="checkbox"
+                      checked={enabled}
+                      onChange={(e) => updateData((nd) => {
+                        const arr = nd.business.schedule[service].days;
+                        if (e.target.checked) { if (!arr.includes(i)) arr.push(i); }
+                        else { nd.business.schedule[service].days = arr.filter((x) => x !== i); }
+                        nd.business.schedule[service].days.sort();
+                      })}
+                    />
+                    {d}
+                  </label>
+                );
+              })}
+            </div>
+            <div className="admin__grid admin__grid--2">
+              <label>Apertura
+                <input
+                  type="time"
+                  value={data.business.schedule[service].open}
+                  onChange={(e) => updateData((d) => { d.business.schedule[service].open = e.target.value; })}
+                />
+              </label>
+              <label>Cierre
+                <input
+                  type="time"
+                  value={data.business.schedule[service].close}
+                  onChange={(e) => updateData((d) => { d.business.schedule[service].close = e.target.value; })}
+                />
+              </label>
+            </div>
+          </div>
+        ))}
+      </section>
+
+      <section className="admin__section admin__section--notif">
+        <div className="admin__section-header">
+          <h2>📢 Enviar notificación en vivo</h2>
+        </div>
+        {!supabaseEnabled && (
+          <div className="admin__warning" style={{ background: 'rgba(255,107,107,0.1)', borderColor: 'rgba(255,107,107,0.4)', color: '#ff8a6b' }}>
+            ⚠️ Supabase no configurado. Definí <code>VITE_SUPABASE_URL</code> y <code>VITE_SUPABASE_ANON_KEY</code> en <code>.env.local</code> (dev) o en Vercel Environment Variables (prod).
+          </div>
+        )}
+
+        <div className="admin__grid admin__grid--2">
+          <label>Título <span className="admin__req">*</span>
+            <input value={notifTitle} onChange={(e) => setNotifTitle(e.target.value)}
+              placeholder="Ej: ¡Promo flash! 20% off en milanesas" />
+          </label>
+          <label>Mensaje
+            <input value={notifBody} onChange={(e) => setNotifBody(e.target.value)}
+              placeholder="Solo hasta las 14hs. Para los Cliente ORO." />
+          </label>
+        </div>
+
+        <div className="notif-picker">
+          <div className="notif-picker__head">
+            <strong>Platos a destacar</strong> <span className="admin__pill">{notifPicked.length} seleccionados</span>
+          </div>
+          <div className="notif-picker__list">
+            {allItems.map((it) => (
+              <label key={it.id} className={`notif-chip ${notifPicked.includes(it.id) ? 'on' : ''}`}>
+                <input type="checkbox" checked={notifPicked.includes(it.id)} onChange={() => toggleNotifItem(it.id)} />
+                <span className="notif-chip__cat">{it.categoryName}:</span>
+                <span className="notif-chip__name">{it.name}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div className="admin__btn-row" style={{ marginTop: 12 }}>
+          <button className="btn-primary" onClick={sendNotification} disabled={notifSending || !supabaseEnabled}>
+            {notifSending ? 'Enviando…' : '📢 Enviar a todos los conectados'}
+          </button>
+          {notifResult && (
+            <span className={`notif-result ${notifResult.ok ? 'ok' : 'err'}`}>
+              {notifResult.msg}
+            </span>
+          )}
+        </div>
+
+        {notifHistory.length > 0 && (
+          <details className="admin__history">
+            <summary>Historial — últimas {notifHistory.length}</summary>
+            <ul className="notif-history">
+              {notifHistory.map((n) => (
+                <li key={n.id}>
+                  <span className="notif-history__time">{new Date(n.created_at).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })}</span>
+                  <span className="notif-history__title">{n.title}</span>
+                  {n.body && <span className="notif-history__body">— {n.body}</span>}
+                  {Array.isArray(n.items) && n.items.length > 0 && (
+                    <span className="notif-history__items">({n.items.length} plato{n.items.length === 1 ? '' : 's'})</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </details>
+        )}
+      </section>
+
+      <section className="admin__section">
+        <div className="admin__section-header">
+          <h2>Categorías y platos</h2>
+          <button className="btn-primary" onClick={addCategory}>+ Nueva categoría</button>
+        </div>
+
+        <div className="admin__search">
+          <input
+            type="search"
+            placeholder="Buscar plato o categoría…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+          {query && (
+            <button
+              type="button"
+              className="admin__search-clear"
+              onClick={() => setQuery('')}
+              aria-label="Limpiar búsqueda"
+            >✕</button>
+          )}
+        </div>
+
+        {normalizedQuery && filteredCategories.every((f) => !f.show) && (
+          <p className="admin__empty">Ningún plato coincide con "{query}".</p>
+        )}
+
+        {filteredCategories.map(({ cat, catIdx: ci, show, itemIds }) => {
+          if (!show) return null;
+          return (
+          <details key={cat.id} className="admin__cat" open>
+            <summary>
+              <span className="admin__cat-icon">{cat.icon}</span>
+              <span className="admin__cat-title">{cat.name}</span>
+              <span className="admin__cat-count">{cat.items.length} platos</span>
+            </summary>
+
+            <div className="admin__grid admin__grid--3">
+              <label>Nombre
+                <input value={cat.name} onChange={(e) => updateData((d) => { d.categories[ci].name = e.target.value; })} />
+              </label>
+              <label>Icono (emoji)
+                <input value={cat.icon} onChange={(e) => updateData((d) => { d.categories[ci].icon = e.target.value; })} />
+              </label>
+              <label>ID
+                <input value={cat.id} onChange={(e) => updateData((d) => { d.categories[ci].id = slugify(e.target.value); })} />
+              </label>
+            </div>
+
+            <div className="admin__btn-row">
+              <button className="btn-secondary" onClick={() => moveCategory(ci, -1)}>↑ Subir</button>
+              <button className="btn-secondary" onClick={() => moveCategory(ci, 1)}>↓ Bajar</button>
+              <button className="btn-danger" onClick={() => removeCategory(ci)}>Eliminar categoría</button>
+            </div>
+
+            <h4 className="admin__h4">Platos</h4>
+            {cat.items.map((it, ii) => {
+              if (itemIds && !itemIds.has(it.id)) return null;
+              return (
+              <div key={it.id} className="admin__item">
+                <div className="admin__grid admin__grid--3">
+                  <label>Nombre
+                    <input value={it.name} onChange={(e) => updateData((d) => { d.categories[ci].items[ii].name = e.target.value; })} />
+                  </label>
+                  <label>Precio
+                    <input type="number" min="0" step="100" value={it.price}
+                      onChange={(e) => updateData((d) => { d.categories[ci].items[ii].price = Number(e.target.value) || 0; })} />
+                  </label>
+                  <label>ID
+                    <input value={it.id} onChange={(e) => updateData((d) => { d.categories[ci].items[ii].id = slugify(e.target.value); })} />
+                  </label>
+                </div>
+                <label className="admin__full">Descripción
+                  <textarea rows={2} value={it.description || ''}
+                    onChange={(e) => updateData((d) => { d.categories[ci].items[ii].description = e.target.value; })} />
+                </label>
+
+                <div className="admin__photo">
+                  <div className="admin__photo-preview">
+                    {it.photo
+                      ? <img src={it.photo} alt="" />
+                      : <span className="admin__photo-empty">Sin foto</span>}
+                  </div>
+                  <div className="admin__photo-actions">
+                    <label className="btn-secondary admin__photo-upload">
+                      {photoBusy === `${ci}-${ii}` ? 'Procesando…' : (it.photo ? 'Cambiar foto' : '📷 Subir foto')}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        hidden
+                        disabled={photoBusy === `${ci}-${ii}`}
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          handlePhotoPick(ci, ii, f);
+                          e.target.value = '';
+                        }}
+                      />
+                    </label>
+                    {it.photo && (
+                      <button type="button" className="btn-danger admin__small" onClick={() => removePhoto(ci, ii)}>
+                        Quitar
+                      </button>
+                    )}
+                    {it.photoMeta && (
+                      <span className="admin__photo-meta">
+                        {it.photoMeta.width}×{it.photoMeta.height} · {formatBytes(it.photoMeta.bytes)}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="admin__extras">
+                  <div className="admin__extras-head">
+                    <strong>Opciones del plato (guarniciones, salsas, aderezos…)</strong>
+                    <button className="btn-secondary" onClick={() => addExtra(ci, ii)}>+ Agregar</button>
+                  </div>
+                  {(it.extras || []).map((ex, ei) => (
+                    <div key={ei} className="admin__extra">
+                      <div className="admin__grid admin__grid--3">
+                        <label>Etiqueta
+                          <input value={ex.label}
+                            onChange={(e) => updateData((d) => { d.categories[ci].items[ii].extras[ei].label = e.target.value; })} />
+                        </label>
+                        <label>Opciones (separadas por coma)
+                          <input
+                            value={(ex.options || []).join(', ')}
+                            onChange={(e) => updateData((d) => {
+                              d.categories[ci].items[ii].extras[ei].options = e.target.value
+                                .split(',').map((s) => s.trim()).filter(Boolean);
+                            })}
+                          />
+                        </label>
+                        <label className="admin__inline">
+                          <input type="checkbox" checked={!!ex.required}
+                            onChange={(e) => updateData((d) => { d.categories[ci].items[ii].extras[ei].required = e.target.checked; })} />
+                          Obligatorio
+                        </label>
+                      </div>
+                      <button className="btn-danger admin__small" onClick={() => removeExtra(ci, ii, ei)}>Quitar opción</button>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="admin__btn-row">
+                  <button className="btn-secondary" onClick={() => moveItem(ci, ii, -1)}>↑</button>
+                  <button className="btn-secondary" onClick={() => moveItem(ci, ii, 1)}>↓</button>
+                  <button className="btn-danger" onClick={() => removeItem(ci, ii)}>Eliminar plato</button>
+                </div>
+              </div>
+              );
+            })}
+
+            <button className="btn-primary admin__add-item" onClick={() => addItem(ci)}>+ Agregar plato</button>
+          </details>
+          );
+        })}
+      </section>
+
+      <div className="admin__sticky-save">
+        <button className="btn-primary" onClick={save}>
+          {savedFlash ? '✓ Cambios guardados (en este navegador)' : 'Guardar cambios'}
+        </button>
+      </div>
+    </div>
+  );
+}

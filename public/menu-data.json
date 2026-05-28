@@ -1,0 +1,270 @@
+{
+  "business": {
+    "name": "Pipón Pipón",
+    "slogan": "Comidas caseras todos los días",
+    "address": "Gregorio Álvarez y esq. Luis Borges, Vega Maipú",
+    "phone": "414950",
+    "whatsapp": "5492257652436",
+    "instagram": "piponpipon.sma",
+    "hours": {
+      "delivery": "Lunes a Sábados 11:00 a 15:00",
+      "mostrador": "Lunes a Sábados 09:00 a 15:00"
+    },
+    "schedule": {
+      "delivery": { "days": [1, 2, 3, 4, 5, 6], "open": "11:00", "close": "15:00" },
+      "mostrador": { "days": [1, 2, 3, 4, 5, 6], "open": "09:00", "close": "15:00" }
+    },
+    "services": ["Delivery", "Mostrador", "Viandas para empresas"]
+  },
+  "categories": [
+    {
+      "id": "promos",
+      "name": "Promos",
+      "icon": "⭐",
+      "items": [
+        {
+          "id": "promo-tarta-ensalada",
+          "name": "Promo: Tarta + Ensalada",
+          "price": 13000,
+          "description": "Elegí cualquier tarta y cualquier ensalada",
+          "extras": [
+            { "label": "Tarta", "options": ["Pollo al Verdeo", "Espinaca, Brócoli y Queso", "Jamón y Queso", "Choclo", "Vegetales Asados"], "required": true },
+            { "label": "Ensalada", "options": ["César", "Atún", "Completa", "Completa con Pollo", "Lacar"], "required": true }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "menu-del-dia",
+      "name": "Menú del Día",
+      "icon": "📅",
+      "items": [
+        {
+          "id": "menu-dia-1",
+          "name": "Plato del Día",
+          "price": 15000,
+          "description": "Cambia día a día. Editá este ítem desde el admin con el plato de hoy."
+        }
+      ]
+    },
+    {
+      "id": "cocina",
+      "name": "Nuestra Cocina",
+      "icon": "🍽️",
+      "items": [
+        {
+          "id": "bife-chorizo",
+          "name": "Bife de Chorizo (300grs)",
+          "price": 25000,
+          "description": "Con guarnición a elección",
+          "extras": [
+            { "label": "Guarnición", "options": ["Papas fritas", "Puré de papas", "Ensalada mixta", "Arroz blanco", "Vegetales al horno"], "required": true }
+          ]
+        },
+        {
+          "id": "bife-chorizo-pobre",
+          "name": "Bife de Chorizo a lo Pobre",
+          "price": 29000,
+          "description": "Cebollas glaseadas y huevos fritos. Con guarnición a elección",
+          "extras": [
+            { "label": "Guarnición", "options": ["Papas fritas", "Puré de papas", "Ensalada mixta", "Arroz blanco", "Vegetales al horno"], "required": true }
+          ]
+        },
+        {
+          "id": "pechuga-grillada",
+          "name": "Pechuga Grillada",
+          "price": 21000,
+          "description": "Con guarnición a elección",
+          "extras": [
+            { "label": "Guarnición", "options": ["Papas fritas", "Puré de papas", "Ensalada mixta", "Arroz blanco", "Vegetales al horno"], "required": true }
+          ]
+        },
+        {
+          "id": "milanesa",
+          "name": "Milanesa",
+          "price": 18000,
+          "description": "Con guarnición a elección",
+          "extras": [
+            { "label": "Guarnición", "options": ["Papas fritas", "Puré de papas", "Ensalada mixta", "Arroz blanco", "Vegetales al horno"], "required": true }
+          ]
+        },
+        {
+          "id": "milanesa-napolitana",
+          "name": "Milanesa Napolitana",
+          "price": 21500,
+          "description": "Salsa, jamón y queso. Con guarnición a elección",
+          "extras": [
+            { "label": "Guarnición", "options": ["Papas fritas", "Puré de papas", "Ensalada mixta", "Arroz blanco", "Vegetales al horno"], "required": true }
+          ]
+        },
+        {
+          "id": "milanesa-suiza",
+          "name": "Milanesa a la Suiza",
+          "price": 21500,
+          "description": "Jamón y queso gratinado. Con guarnición a elección",
+          "extras": [
+            { "label": "Guarnición", "options": ["Papas fritas", "Puré de papas", "Ensalada mixta", "Arroz blanco", "Vegetales al horno"], "required": true }
+          ]
+        },
+        {
+          "id": "suprema",
+          "name": "Suprema",
+          "price": 18000,
+          "description": "Con guarnición a elección",
+          "extras": [
+            { "label": "Guarnición", "options": ["Papas fritas", "Puré de papas", "Ensalada mixta", "Arroz blanco", "Vegetales al horno"], "required": true }
+          ]
+        },
+        {
+          "id": "suprema-napolitana",
+          "name": "Suprema Napolitana",
+          "price": 21500,
+          "description": "Salsa, jamón y queso. Con guarnición a elección",
+          "extras": [
+            { "label": "Guarnición", "options": ["Papas fritas", "Puré de papas", "Ensalada mixta", "Arroz blanco", "Vegetales al horno"], "required": true }
+          ]
+        },
+        {
+          "id": "suprema-suiza",
+          "name": "Suprema a la Suiza",
+          "price": 21500,
+          "description": "Jamón y queso gratinado. Con guarnición a elección",
+          "extras": [
+            { "label": "Guarnición", "options": ["Papas fritas", "Puré de papas", "Ensalada mixta", "Arroz blanco", "Vegetales al horno"], "required": true }
+          ]
+        },
+        {
+          "id": "guiso-lentejas",
+          "name": "Guiso de Lentejas",
+          "price": 18000,
+          "description": "Receta casera bien sustanciosa"
+        }
+      ]
+    },
+    {
+      "id": "ensaladas",
+      "name": "Ensaladas",
+      "icon": "🥗",
+      "items": [
+        {
+          "id": "ensalada-cesar",
+          "name": "César",
+          "price": 14000,
+          "description": "Lechuga, crutones, pollo, aderezo César y queso parmesano"
+        },
+        {
+          "id": "ensalada-atun",
+          "name": "Atún",
+          "price": 15000,
+          "description": "Lechuga, rúcula, zanahoria, tomate, huevo, aceitunas negras y atún",
+          "extras": [
+            { "label": "Aderezo", "options": ["Sin aderezo", "Aceite y vinagre", "Mayonesa", "Mostaza", "Limón"], "required": false }
+          ]
+        },
+        {
+          "id": "ensalada-completa",
+          "name": "Completa",
+          "price": 13500,
+          "description": "Lechuga, zanahoria, tomate, huevo, jamón, queso y choclo",
+          "extras": [
+            { "label": "Aderezo", "options": ["Sin aderezo", "Aceite y vinagre", "Mayonesa", "Mostaza", "Limón"], "required": false }
+          ]
+        },
+        {
+          "id": "ensalada-completa-pollo",
+          "name": "Completa con Pollo",
+          "price": 14000,
+          "description": "Lechuga, zanahoria, tomate, huevo, jamón, queso y pollo",
+          "extras": [
+            { "label": "Aderezo", "options": ["Sin aderezo", "Aceite y vinagre", "Mayonesa", "Mostaza", "Limón"], "required": false }
+          ]
+        },
+        {
+          "id": "ensalada-lacar",
+          "name": "Lacar",
+          "price": 14500,
+          "description": "Arroz yamani, lentejas, zanahoria, queso, huevo y choclo",
+          "extras": [
+            { "label": "Aderezo", "options": ["Sin aderezo", "Aceite y vinagre", "Mayonesa", "Mostaza", "Limón"], "required": false }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "pastas",
+      "name": "Pastas Caseras",
+      "icon": "🍝",
+      "items": [
+        {
+          "id": "tallarines",
+          "name": "Tallarines al Huevo",
+          "price": 16000,
+          "description": "Pasta fresca casera",
+          "extras": [
+            { "label": "Salsa", "options": ["Fileto", "Crema", "Mixta", "Boloñesa"], "required": true },
+            { "label": "Queso rallado", "options": ["Sin queso", "Con queso"], "required": false }
+          ]
+        },
+        {
+          "id": "noquis",
+          "name": "Ñoquis",
+          "price": 16000,
+          "description": "Ñoquis de papa caseros",
+          "extras": [
+            { "label": "Salsa", "options": ["Fileto", "Crema", "Mixta", "Boloñesa"], "required": true },
+            { "label": "Queso rallado", "options": ["Sin queso", "Con queso"], "required": false }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "tartas",
+      "name": "Tartas",
+      "icon": "🥧",
+      "items": [
+        { "id": "tarta-pollo-verdeo", "name": "Pollo al Verdeo", "price": 9500, "description": "Porción individual" },
+        { "id": "tarta-espinaca", "name": "Espinaca, Brócoli y Queso", "price": 9500, "description": "Porción individual" },
+        { "id": "tarta-jamon-queso", "name": "Jamón y Queso", "price": 9500, "description": "Porción individual" },
+        { "id": "tarta-choclo", "name": "Choclo", "price": 9500, "description": "Porción individual" },
+        { "id": "tarta-vegetales", "name": "Vegetales Asados", "price": 9500, "description": "Porción individual" }
+      ]
+    },
+    {
+      "id": "postres",
+      "name": "Postres",
+      "icon": "🍮",
+      "items": [
+        { "id": "flan", "name": "Flan", "price": 4000, "description": "Casero, con dulce de leche o crema" },
+        { "id": "budin-pan", "name": "Budín de Pan", "price": 4000, "description": "Casero, con caramelo" },
+        { "id": "ensalada-frutas", "name": "Ensalada de Frutas", "price": 4000, "description": "Fruta fresca de estación" }
+      ]
+    },
+    {
+      "id": "bebidas",
+      "name": "Bebidas",
+      "icon": "🥤",
+      "items": [
+        { "id": "agua-500", "name": "Agua Mineral 500cc", "price": 3000, "description": "" },
+        { "id": "agua-1500", "name": "Agua Mineral 1,5lt", "price": 4500, "description": "" },
+        {
+          "id": "gaseosa-500",
+          "name": "Gaseosa / Agua Saborizada 500cc",
+          "price": 4000,
+          "description": "",
+          "extras": [
+            { "label": "Sabor", "options": ["Coca-Cola", "Coca-Cola Zero", "Sprite", "Fanta", "Agua saborizada Manzana", "Agua saborizada Pera"], "required": true }
+          ]
+        },
+        {
+          "id": "gaseosa-1500",
+          "name": "Gaseosa / Agua Saborizada 1,5lt",
+          "price": 7000,
+          "description": "",
+          "extras": [
+            { "label": "Sabor", "options": ["Coca-Cola", "Coca-Cola Zero", "Sprite", "Fanta", "Agua saborizada Manzana", "Agua saborizada Pera"], "required": true }
+          ]
+        }
+      ]
+    }
+  ]
+}
