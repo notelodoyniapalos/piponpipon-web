@@ -18,6 +18,7 @@ import {
   showLocalNotification
 } from './utils/pwa.js';
 import { useNotificationsRealtime } from './utils/useNotificationsRealtime.js';
+import { ensurePushSubscription } from './utils/pushSubscribe.js';
 
 const CART_KEY = 'piponpipon_cart_session_v1';
 
@@ -147,8 +148,12 @@ export default function App() {
         showLocalNotification('🔔 ¡Notificaciones activadas!', {
           body: 'Te avisamos cuando haya nuevas promos exclusivas.'
         });
+        // Subscribe to push so the OS notifies even with the app closed
+        await ensurePushSubscription();
       }
     } else if (cur === 'granted') {
+      // Refresh push subscription in case the server lost it / endpoint rotated
+      await ensurePushSubscription();
       showLocalNotification('🔔 Recordatorio', {
         body: 'Tenés notificaciones activadas. Te vamos a avisar cuando haya promos nuevas.'
       });
@@ -156,6 +161,13 @@ export default function App() {
       alert('Las notificaciones están bloqueadas en tu navegador. Para activarlas, andá a la configuración del sitio y habilitá las notificaciones.');
     }
   }, []);
+
+  // On mount, if permission is already granted, make sure we have a push subscription
+  useEffect(() => {
+    if (notifState === 'granted') {
+      ensurePushSubscription();
+    }
+  }, [notifState]);
 
   const scrollToCategory = useCallback((id) => {
     document.getElementById(`cat-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });

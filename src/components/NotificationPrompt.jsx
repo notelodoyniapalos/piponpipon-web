@@ -1,5 +1,6 @@
 import Modal from './Modal.jsx';
 import { requestNotifPermission, markNotifDismissed, showLocalNotification } from '../utils/pwa.js';
+import { ensurePushSubscription } from '../utils/pushSubscribe.js';
 
 export default function NotificationPrompt({ open, onClose, onChange }) {
   const accept = async () => {
@@ -8,6 +9,8 @@ export default function NotificationPrompt({ open, onClose, onChange }) {
       showLocalNotification('🔔 ¡Notificaciones activadas!', {
         body: 'Te vamos a avisar cuando haya nuevas promos exclusivas y descuentos Cliente ORO.'
       });
+      // Register a Web Push subscription so the OS can wake the device even with app closed
+      await ensurePushSubscription();
     }
     onChange?.(result);
     onClose();

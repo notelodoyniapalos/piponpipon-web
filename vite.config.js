@@ -6,6 +6,9 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.js',
       registerType: 'autoUpdate',
       injectRegister: 'auto',
       includeAssets: [
@@ -30,30 +33,9 @@ export default defineConfig({
           { src: 'icon-512-maskable.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }
         ]
       },
-      workbox: {
+      injectManifest: {
         globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
-        navigateFallback: '/index.html',
-        navigateFallbackDenylist: [/^\/admin/, /\/menu-data\.json$/],
-        runtimeCaching: [
-          {
-            // Always try network first for the live menu data; fall back to cache offline
-            urlPattern: ({ url }) => url.pathname.endsWith('/menu-data.json'),
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'menu-data',
-              networkTimeoutSeconds: 3,
-              expiration: { maxEntries: 1, maxAgeSeconds: 60 * 60 * 24 * 7 }
-            }
-          },
-          {
-            urlPattern: ({ url }) => url.hostname === 'images.unsplash.com' || url.hostname === 'loremflickr.com',
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'menu-photos',
-              expiration: { maxEntries: 80, maxAgeSeconds: 60 * 60 * 24 * 30 }
-            }
-          }
-        ]
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024
       },
       devOptions: { enabled: false }
     })

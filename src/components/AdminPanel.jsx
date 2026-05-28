@@ -89,22 +89,54 @@ export default function AdminPanel({ onExit, onSaved }) {
         photo: it.photo || itemPhotoUrl(it.id, 120, 120),
         categoryId: it.categoryId
       }));
+
+    // 1) Insert into notifications table (triggers Realtime for OPEN apps)
     const { error } = await supabase.from('notifications').insert({
       title: notifTitle.trim(),
       body: notifBody.trim() || null,
       items: itemsPayload.length > 0 ? itemsPayload : null,
       sound: true
     });
-    setNotifSending(false);
     if (error) {
+      setNotifSending(false);
       setNotifResult({ ok: false, msg: 'Error al enviar: ' + error.message });
       return;
     }
-    setNotifResult({ ok: true, msg: '✓ Enviada a todos los clientes conectados' });
+
+    // 2) Invoke Edge Function send-push to push to CLOSED apps via VAPID
+    let pushReport = '';
+    try {
+      const { data: pushData, error: pushError } = await supabase.functions.invoke('send-push', {
+        body: {
+          title: notifTitle.trim(),
+          body: notifBody.trim() || null,
+          items: itemsPayload.length > 0 ? itemsPayload : null,
+          url: '/#menu-del-dia'
+        }
+      });
+      if (pushError) {
+        pushReport = ` (push: error — ${pushError.message || 'edge function falló'})`;
+      } else if (pushData) {
+        pushReport = ` (push: ${pushData.sent || 0}/${pushData.total || 0})`;
+      }
+    } catch (e) {
+      pushReport = ' (push: edge function no disponible)';
+    }
+
+    setNotifSending(false);
+    setNotifResult({ ok: true, msg: `✓ Enviada a clientes conectados${pushReport}` });
     setNotifTitle('');
     setNotifBody('');
     setNotifPicked([]);
-    setTimeout(() => setNotifResult(null), 4000);
+    setTimeout(() => setNotifResult(null), 6000);
+  };
+
+  const useTemplateMenuDelDia = () => {
+    setNotifTitle('🍽️ Menú del Día — 15% OFF');
+    setNotifBody('Ahora tenés un 15% de descuento en el Menú del Día. ¡Pedilo YA!');
+    // Auto-pick the Menú del Día category items
+    const menuDelDiaCat = data.categories.find((c) => c.id === 'menu-del-dia');
+    if (menuDelDiaCat) setNotifPicked(menuDelDiaCat.items.map((i) => i.id));
   };
 
   const normalizedQuery = query.trim().toLowerCase();
@@ -383,6 +415,12 @@ export default function AdminPanel({ onExit, onSaved }) {
             ⚠️ Supabase no configurado. Definí <code>VITE_SUPABASE_URL</code> y <code>VITE_SUPABASE_ANON_KEY</code> en <code>.env.local</code> (dev) o en Vercel Environment Variables (prod).
           </div>
         )}
+
+        <div className="admin__btn-row" style={{ marginBottom: 8 }}>
+          <button type="button" className="btn-secondary" onClick={useTemplateMenuDelDia}>
+            📅 Usar template "Menú del Día -15%"
+          </button>
+        </div>
 
         <div className="admin__grid admin__grid--2">
           <label>Título <span className="admin__req">*</span>
