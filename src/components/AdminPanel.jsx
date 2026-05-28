@@ -3,6 +3,7 @@ import { loadMenuData, saveMenuData, resetMenuData, getBundledMenuData, hasOverr
 import { compressImage, formatBytes } from '../utils/imageCompress.js';
 import { supabase, supabaseEnabled } from '../utils/supabaseClient.js';
 import { itemPhotoUrl } from '../utils/itemPhotos.js';
+import { shareMenuDelDia } from '../utils/share.js';
 
 const DAYS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 
@@ -114,6 +115,9 @@ export default function AdminPanel({ onExit, onSaved }) {
     }
 
     // 2) Invoke Edge Function send-push to push to CLOSED apps via VAPID
+    const heroImage = itemsPayload.find((i) => i.photo && !i.photo.startsWith('https://loremflickr'))?.photo
+      || itemsPayload[0]?.photo
+      || null;
     let pushReport = '';
     try {
       const { data: pushData, error: pushError } = await supabase.functions.invoke('send-push', {
@@ -121,6 +125,7 @@ export default function AdminPanel({ onExit, onSaved }) {
           title: notifTitle.trim(),
           body: notifBody.trim() || null,
           items: itemsPayload.length > 0 ? itemsPayload : null,
+          image: heroImage,
           url: '/#menu-del-dia'
         }
       });
@@ -484,6 +489,16 @@ export default function AdminPanel({ onExit, onSaved }) {
               </button>
               <button className="btn-primary" onClick={save} style={{ marginTop: 8, width: '100%' }}>
                 {savedFlash ? '✓ Cambios guardados' : '💾 Guardar Menú del Día'}
+              </button>
+              <button
+                className="btn-secondary"
+                style={{ marginTop: 8, width: '100%' }}
+                onClick={async () => {
+                  const res = await shareMenuDelDia(menuCat?.items || []);
+                  if (res.via === 'clipboard') alert('✓ Link copiado al portapapeles');
+                }}
+              >
+                📤 Compartir Plato del Día
               </button>
               <p className="muted" style={{ fontSize: 12, textAlign: 'center', marginTop: 8 }}>
                 Recordá exportar el JSON y subirlo al servidor para que los clientes lo vean.

@@ -44,6 +44,7 @@ self.addEventListener('push', (event) => {
     body: finalBody,
     icon: '/icon-192.png',
     badge: '/icon-192.png',
+    image: data.image || undefined,
     vibrate: [120, 60, 120],
     tag: 'pipon-notif',
     renotify: true,
