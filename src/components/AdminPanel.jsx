@@ -4,6 +4,9 @@ import { compressImage, formatBytes } from '../utils/imageCompress.js';
 import { supabase, supabaseEnabled } from '../utils/supabaseClient.js';
 import { itemPhotoUrl } from '../utils/itemPhotos.js';
 import { shareMenuDelDia } from '../utils/share.js';
+import { formatPrice } from '../utils/formatPrice.js';
+import { FAKE_CLIENTS, buildStats } from '../utils/fakeData.js';
+import { getStatus } from '../utils/scheduleStatus.js';
 
 // Lazy load — these pull in recharts + leaflet which would bloat the client bundle
 const ClientesSection = lazy(() => import('./admin/ClientesSection.jsx'));
@@ -350,34 +353,81 @@ export default function AdminPanel({ onExit, onSaved }) {
   };
 
   // ---------- Render ----------
-  // ===== Dashboard view =====
+  // ===== Dashboard view (moderno) =====
   if (section === 'dashboard') {
+    const now = new Date();
+    const dateLabel = now.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' });
+    const status = getStatus(data.business.schedule, now);
+    const isOpenNow = status.delivery.isOpen || status.mostrador.isOpen;
+    const statusLabel = status.delivery.isOpen ? 'Delivery abierto' : status.mostrador.isOpen ? 'Solo mostrador' : 'Cerrado ahora';
+
+    const stats = buildStats(FAKE_CLIENTS);
+    const todayOrders = stats.salesByDay[stats.salesByDay.length - 1];
+    const yesterdayOrders = stats.salesByDay[stats.salesByDay.length - 2];
+    const todayRevenue = todayOrders?.sales || 0;
+    const todayCount = todayOrders?.orders || 0;
+    const deltaPct = yesterdayOrders?.sales
+      ? Math.round(((todayRevenue - yesterdayOrders.sales) / yesterdayOrders.sales) * 100)
+      : 0;
+
+    const top3 = stats.topItems.slice(0, 4);
+    const topMax = Math.max(...top3.map((d) => d.qty), 1);
+
+    const last14 = stats.salesByDay;
+    const maxDay = Math.max(...last14.map((d) => d.sales), 1);
+
     return (
       <div className="admin">
-        <header className="admin__header">
-          <h1>Administración</h1>
-          <div className="admin__actions">
-            <button className="btn-secondary" onClick={onExit}>← Volver a la app</button>
+        <div className="dash-hero">
+          <img src="/logo-icon.svg" alt="" className="dash-hero__avatar" />
+          <div className="dash-hero__text">
+            <div className="dash-hero__hi">¡Hola, Pipón!</div>
+            <div className="dash-hero__date">{dateLabel}</div>
           </div>
-        </header>
+          <span className={`dash-hero__status dash-hero__status--${isOpenNow ? 'open' : 'closed'}`}>
+            <span className="dash-hero__dot" />
+            {statusLabel}
+          </span>
+          <button className="dash-hero__exit" onClick={onExit} aria-label="Volver">✕</button>
+        </div>
 
+        <div className="dash-kpis">
+          <div className="dash-kpi">
+            <div className="dash-kpi__v">{todayCount}</div>
+            <div className="dash-kpi__l">Pedidos hoy</div>
+          </div>
+          <div className="dash-kpi">
+            <div className="dash-kpi__v dash-kpi__v--orange">{formatPrice(todayRevenue).replace('$', '$')}</div>
+            <div className="dash-kpi__l">Facturación hoy</div>
+          </div>
+          <div className="dash-kpi">
+            <div className="dash-kpi__v" style={{ color: deltaPct >= 0 ? '#4ade80' : '#ff6b6b' }}>
+              {deltaPct >= 0 ? '↑' : '↓'} {Math.abs(deltaPct)}%
+            </div>
+            <div className="dash-kpi__l">vs ayer</div>
+          </div>
+          <div className="dash-kpi">
+            <div className="dash-kpi__v">{FAKE_CLIENTS.length}</div>
+            <div className="dash-kpi__l">Clientes</div>
+          </div>
+        </div>
+
+        <div className="dash-section-h">Accesos rápidos</div>
         <div className="dash-grid">
           <button className="dash-card" onClick={() => setSection('notif')}>
             <div className="dash-card__icon">📢</div>
             <div className="dash-card__text">
-              <div className="dash-card__title">Enviar notificación</div>
-              <div className="dash-card__hint">A clientes conectados</div>
+              <div className="dash-card__title">Notificar</div>
+              <div className="dash-card__hint">Push en vivo</div>
             </div>
           </button>
-
           <button className="dash-card" onClick={() => setSection('menu')}>
             <div className="dash-card__icon">🍽️</div>
             <div className="dash-card__text">
-              <div className="dash-card__title">Editar menú</div>
-              <div className="dash-card__hint">Platos, precios, fotos</div>
+              <div className="dash-card__title">Menú</div>
+              <div className="dash-card__hint">Platos y precios</div>
             </div>
           </button>
-
           <button className="dash-card" onClick={() => setSection('clientes')}>
             <div className="dash-card__icon">👥</div>
             <div className="dash-card__text">
@@ -385,23 +435,50 @@ export default function AdminPanel({ onExit, onSaved }) {
               <div className="dash-card__hint">Datos e historial</div>
             </div>
           </button>
-
           <button className="dash-card" onClick={() => setSection('stats')}>
             <div className="dash-card__icon">📊</div>
             <div className="dash-card__text">
               <div className="dash-card__title">Estadísticas</div>
-              <div className="dash-card__hint">Más pedidos y métricas</div>
+              <div className="dash-card__hint">Métricas full</div>
             </div>
           </button>
-
           <button className="dash-card dash-card--wide" onClick={() => setSection('business')}>
             <div className="dash-card__icon">🏢</div>
             <div className="dash-card__text">
               <div className="dash-card__title">Mi negocio</div>
-              <div className="dash-card__hint">Datos, dirección, horarios, contactos</div>
+              <div className="dash-card__hint">Datos, dirección, horarios</div>
             </div>
           </button>
         </div>
+
+        <div className="dash-section-h">📈 Ventas — últimos 14 días</div>
+        <div className="dash-spark">
+          {last14.map((d, i) => (
+            <div className="dash-spark__bar-wrap" key={i} title={`${d.label}: ${formatPrice(d.sales)} · ${d.orders} pedidos`}>
+              <div className="dash-spark__bar" style={{ height: `${Math.max(4, (d.sales / maxDay) * 100)}%` }} />
+              <div className="dash-spark__lbl">{d.label}</div>
+            </div>
+          ))}
+        </div>
+
+        <div className="dash-section-h">🏆 Top platos (60 días)</div>
+        <div className="dash-top">
+          {top3.map((d) => (
+            <div className="dash-top__row" key={d.name}>
+              <div className="dash-top__name">{d.name}</div>
+              <div className="dash-top__bar"><div style={{ width: `${(d.qty / topMax) * 100}%` }} /></div>
+              <div className="dash-top__qty">{d.qty}</div>
+            </div>
+          ))}
+        </div>
+
+        <button className="dash-cta-stats" onClick={() => setSection('stats')}>
+          📊 Ver todas las estadísticas con gráficos interactivos →
+        </button>
+
+        <p className="muted" style={{ fontSize: 11, textAlign: 'center', marginTop: 12 }}>
+          ℹ️ Datos demo. Cuando tengamos la tabla <code>orders</code> en Supabase, los números pasan a ser reales en vivo.
+        </p>
       </div>
     );
   }
