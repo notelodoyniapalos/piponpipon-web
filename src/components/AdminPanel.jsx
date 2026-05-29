@@ -362,34 +362,44 @@ export default function AdminPanel({ onExit, onSaved }) {
         </header>
 
         <div className="dash-grid">
-          <button className="dash-card dash-card--notif" onClick={() => setSection('notif')}>
+          <button className="dash-card" onClick={() => setSection('notif')}>
             <div className="dash-card__icon">📢</div>
-            <div className="dash-card__title">Enviar notificación</div>
-            <div className="dash-card__hint">A todos los clientes conectados</div>
+            <div className="dash-card__text">
+              <div className="dash-card__title">Enviar notificación</div>
+              <div className="dash-card__hint">A clientes conectados</div>
+            </div>
           </button>
 
-          <button className="dash-card dash-card--menu" onClick={() => setSection('menu')}>
+          <button className="dash-card" onClick={() => setSection('menu')}>
             <div className="dash-card__icon">🍽️</div>
-            <div className="dash-card__title">Editar menú online</div>
-            <div className="dash-card__hint">Platos, precios, fotos, horarios</div>
+            <div className="dash-card__text">
+              <div className="dash-card__title">Editar menú</div>
+              <div className="dash-card__hint">Platos, precios, fotos</div>
+            </div>
           </button>
 
-          <button className="dash-card dash-card--clients" onClick={() => setSection('clientes')}>
+          <button className="dash-card" onClick={() => setSection('clientes')}>
             <div className="dash-card__icon">👥</div>
-            <div className="dash-card__title">Clientes</div>
-            <div className="dash-card__hint">Nombres, teléfonos, historial</div>
+            <div className="dash-card__text">
+              <div className="dash-card__title">Clientes</div>
+              <div className="dash-card__hint">Datos e historial</div>
+            </div>
           </button>
 
-          <button className="dash-card dash-card--stats" onClick={() => setSection('stats')}>
+          <button className="dash-card" onClick={() => setSection('stats')}>
             <div className="dash-card__icon">📊</div>
-            <div className="dash-card__title">Estadísticas</div>
-            <div className="dash-card__hint">Platos más pedidos y métricas</div>
+            <div className="dash-card__text">
+              <div className="dash-card__title">Estadísticas</div>
+              <div className="dash-card__hint">Más pedidos y métricas</div>
+            </div>
           </button>
 
-          <button className="dash-card dash-card--business" onClick={() => setSection('business')}>
+          <button className="dash-card dash-card--wide" onClick={() => setSection('business')}>
             <div className="dash-card__icon">🏢</div>
-            <div className="dash-card__title">Mi negocio</div>
-            <div className="dash-card__hint">Datos, dirección, horarios, contactos</div>
+            <div className="dash-card__text">
+              <div className="dash-card__title">Mi negocio</div>
+              <div className="dash-card__hint">Datos, dirección, horarios, contactos</div>
+            </div>
           </button>
         </div>
       </div>
