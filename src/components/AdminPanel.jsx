@@ -33,14 +33,120 @@ const SECTIONS = {
   dashboard: { title: 'Administración' },
   notif:     { title: '📢 Enviar notificación' },
   menu:      { title: '🍽️ Editar menú' },
-  business:  { title: '🏢 Mi negocio' },
+  business:  { title: '👤 Mi perfil' },
   clientes:  { title: '👥 Clientes' },
-  stats:     { title: '📊 Estadísticas' }
+  stats:     { title: '📊 Estadísticas' },
+  finanzas:  { title: '💵 Finanzas / Stock' }
 };
+
+// ---------- SVG smooth area chart (interactive) ----------
+function SparkChart({ data, onPick }) {
+  const W = 320, H = 100, PAD_X = 8, PAD_Y = 10;
+  const max = Math.max(...data.map((d) => d.sales), 1);
+  const stepX = (W - PAD_X * 2) / Math.max(data.length - 1, 1);
+  const points = data.map((d, i) => ({
+    x: PAD_X + i * stepX,
+    y: PAD_Y + (1 - d.sales / max) * (H - PAD_Y * 2),
+    d
+  }));
+
+  // Smooth path using quadratic curves through midpoints
+  let path = `M${points[0].x},${points[0].y}`;
+  for (let i = 1; i < points.length; i++) {
+    const mx = (points[i - 1].x + points[i].x) / 2;
+    const my = (points[i - 1].y + points[i].y) / 2;
+    path += ` Q${points[i - 1].x},${points[i - 1].y} ${mx},${my}`;
+  }
+  path += ` T${points[points.length - 1].x},${points[points.length - 1].y}`;
+  const areaPath = `${path} L${points[points.length - 1].x},${H} L${points[0].x},${H} Z`;
+
+  return (
+    <div className="dash-spark-svg-wrap">
+      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="dash-spark-svg" role="img">
+        <defs>
+          <linearGradient id="sparkFill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#F27900" stopOpacity="0.55" />
+            <stop offset="100%" stopColor="#F27900" stopOpacity="0.03" />
+          </linearGradient>
+        </defs>
+        <path d={areaPath} fill="url(#sparkFill)" className="dash-spark-svg__area" />
+        <path d={path} fill="none" stroke="#F27900" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="dash-spark-svg__line" />
+        {points.map((p, i) => (
+          <g key={i} className="dash-spark-svg__pt" style={{ animationDelay: `${1.2 + i * 0.05}s` }}>
+            <circle cx={p.x} cy={p.y} r="3" fill="#F27900" />
+            {/* invisible bigger hit area */}
+            <circle
+              cx={p.x} cy={p.y} r="14"
+              fill="transparent"
+              style={{ cursor: 'pointer' }}
+              onClick={() => onPick(p.d)}
+            />
+          </g>
+        ))}
+      </svg>
+      <div className="dash-spark-svg__labels">
+        {data.map((d, i) =>
+          (i === 0 || i === Math.floor(data.length / 2) || i === data.length - 1)
+            ? <span key={i} style={{ left: `${(i / (data.length - 1)) * 100}%` }}>{d.label}</span>
+            : null
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ---------- Smart recommendations ----------
+function SmartTip({ stats, clients }) {
+  const tips = [];
+
+  if (stats.topItems[0]) {
+    tips.push({
+      icon: '🏆',
+      text: <>Tu plato más vendido es <strong>{stats.topItems[0].name}</strong> ({stats.topItems[0].qty} unidades). Asegurate de tener stock.</>
+    });
+  }
+
+  const last7 = stats.salesByDay.slice(-7).reduce((s, d) => s + d.sales, 0);
+  const prev7 = stats.salesByDay.slice(-14, -7).reduce((s, d) => s + d.sales, 0);
+  if (prev7) {
+    const pct = Math.round(((last7 - prev7) / prev7) * 100);
+    if (pct < -10) tips.push({ icon: '📉', text: <>Tu facturación bajó <strong>{Math.abs(pct)}%</strong> esta semana. Probá enviar una notificación con descuento.</> });
+    else if (pct > 10) tips.push({ icon: '📈', text: <>Tu facturación subió <strong>{pct}%</strong> esta semana, ¡buen ritmo!</> });
+  }
+
+  if (stats.hourData?.length) {
+    const peak = stats.hourData.reduce((m, h) => (h.orders > m.orders ? h : m), stats.hourData[0]);
+    if (peak?.orders > 0) tips.push({ icon: '🕐', text: <>Tu hora pico es las <strong>{peak.hour}</strong>. Planificá refuerzos en cocina.</> });
+  }
+
+  const topClient = [...clients].sort((a, b) => b.totalSpent - a.totalSpent)[0];
+  if (topClient) tips.push({ icon: '⭐', text: <><strong>{topClient.name}</strong> es tu mejor cliente. Mandale una promo personalizada para fidelizarlo.</> });
+
+  tips.push({ icon: '💡', text: <>Cuando configures <strong>Finanzas / Stock</strong>, voy a avisarte sobre rentabilidad, márgenes y reposición.</> });
+
+  return (
+    <div className="dash-tip">
+      <div className="dash-tip__header">
+        <span className="dash-tip__bot">🤖</span>
+        <span className="dash-tip__title">Recomendaciones inteligentes</span>
+      </div>
+      <ul className="dash-tip__list">
+        {tips.slice(0, 4).map((t, i) => (
+          <li key={i} style={{ animationDelay: `${2 + i * 0.25}s` }}>
+            <span className="dash-tip__icon">{t.icon}</span>
+            <span className="dash-tip__text">{t.text}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
 
 export default function AdminPanel({ onExit, onSaved }) {
   const [section, setSection] = useState('dashboard');
   const [menuView, setMenuView] = useState('chat'); // 'chat' | 'full'
+  const [selectedDay, setSelectedDay] = useState(null);
+  const [selectedDish, setSelectedDish] = useState(null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(null);
   // Chat flow internal state
@@ -442,43 +548,94 @@ export default function AdminPanel({ onExit, onSaved }) {
               <div className="dash-card__hint">Métricas full</div>
             </div>
           </button>
-          <button className="dash-card dash-card--wide" onClick={() => setSection('business')}>
-            <div className="dash-card__icon">🏢</div>
+          <button className="dash-card" onClick={() => setSection('finanzas')}>
+            <div className="dash-card__icon">💵</div>
             <div className="dash-card__text">
-              <div className="dash-card__title">Mi negocio</div>
-              <div className="dash-card__hint">Datos, dirección, horarios</div>
+              <div className="dash-card__title">Finanzas / Stock</div>
+              <div className="dash-card__hint">Próximamente</div>
+            </div>
+          </button>
+          <button className="dash-card" onClick={() => setSection('business')}>
+            <div className="dash-card__icon">👤</div>
+            <div className="dash-card__text">
+              <div className="dash-card__title">Mi perfil</div>
+              <div className="dash-card__hint">Negocio, horarios</div>
             </div>
           </button>
         </div>
 
         <div className="dash-section-h">📈 Ventas — últimos 14 días</div>
-        <div className="dash-spark">
-          {last14.map((d, i) => (
-            <div className="dash-spark__bar-wrap" key={i} title={`${d.label}: ${formatPrice(d.sales)} · ${d.orders} pedidos`}>
-              <div className="dash-spark__bar" style={{ height: `${Math.max(4, (d.sales / maxDay) * 100)}%` }} />
-              <div className="dash-spark__lbl">{d.label}</div>
+        <SparkChart data={last14} onPick={(d) => setSelectedDay(d)} />
+        {selectedDay && (
+          <div className="dash-spark__detail">
+            <div className="dash-spark__detail-row">
+              <span className="muted">Fecha</span>
+              <strong>{selectedDay.label}</strong>
             </div>
-          ))}
-        </div>
+            <div className="dash-spark__detail-row">
+              <span className="muted">Facturación</span>
+              <strong style={{ color: 'var(--color-primary)' }}>{formatPrice(selectedDay.sales)}</strong>
+            </div>
+            <div className="dash-spark__detail-row">
+              <span className="muted">Pedidos</span>
+              <strong>{selectedDay.orders}</strong>
+            </div>
+            <button className="dash-spark__detail-close" onClick={() => setSelectedDay(null)}>✕ Cerrar</button>
+          </div>
+        )}
 
         <div className="dash-section-h">🏆 Top platos (60 días)</div>
         <div className="dash-top">
-          {top3.map((d) => (
-            <div className="dash-top__row" key={d.name}>
+          {top3.map((d, i) => (
+            <button
+              className="dash-top__row"
+              key={d.name}
+              style={{ '--w': `${(d.qty / topMax) * 100}%`, '--i': i }}
+              onClick={() => setSelectedDish(d)}
+            >
               <div className="dash-top__name">{d.name}</div>
-              <div className="dash-top__bar"><div style={{ width: `${(d.qty / topMax) * 100}%` }} /></div>
+              <div className="dash-top__bar"><div /></div>
               <div className="dash-top__qty">{d.qty}</div>
-            </div>
+            </button>
           ))}
         </div>
+        {selectedDish && (
+          <div className="dash-spark__detail">
+            <div className="dash-spark__detail-row"><span className="muted">Plato</span><strong>{selectedDish.name}</strong></div>
+            <div className="dash-spark__detail-row"><span className="muted">Vendidos</span><strong>{selectedDish.qty} unidades</strong></div>
+            <div className="dash-spark__detail-row"><span className="muted">Facturó</span><strong style={{ color: 'var(--color-primary)' }}>{formatPrice(selectedDish.revenue)}</strong></div>
+            <button className="dash-spark__detail-close" onClick={() => setSelectedDish(null)}>✕ Cerrar</button>
+          </div>
+        )}
 
         <button className="dash-cta-stats" onClick={() => setSection('stats')}>
           📊 Ver todas las estadísticas con gráficos interactivos →
         </button>
 
+        <SmartTip stats={stats} clients={FAKE_CLIENTS} />
+
         <p className="muted" style={{ fontSize: 11, textAlign: 'center', marginTop: 12 }}>
           ℹ️ Datos demo. Cuando tengamos la tabla <code>orders</code> en Supabase, los números pasan a ser reales en vivo.
         </p>
+      </div>
+    );
+  }
+
+  // ===== Finanzas / Stock (placeholder) =====
+  if (section === 'finanzas') {
+    return (
+      <div className="admin">
+        <header className="admin__header">
+          <h1>{SECTIONS.finanzas.title}</h1>
+          <div className="admin__actions">
+            <button className="btn-secondary" onClick={() => setSection('dashboard')}>← Volver</button>
+          </div>
+        </header>
+        <div className="admin__placeholder">
+          <p>🚧 <strong>Próximamente</strong></p>
+          <p>Acá vas a poder cargar el <strong>costo de cada plato</strong>, ver <strong>rentabilidad real</strong>, controlar el <strong>stock</strong> de ingredientes, y recibir avisos cuando algo se está por agotar o cuando un plato baja de margen.</p>
+          <p className="muted">Esta data alimenta las recomendaciones inteligentes del dashboard.</p>
+        </div>
       </div>
     );
   }

@@ -2807,41 +2807,87 @@ body.no-scroll { overflow: hidden; }
   padding-left: 4px;
 }
 
-/* Sparkline bars */
-.dash-spark {
-  display: flex;
-  align-items: flex-end;
-  gap: 4px;
-  height: 110px;
-  padding: 12px;
+/* SVG sparkline area chart */
+.dash-spark-svg-wrap {
+  position: relative;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
+  padding: 14px 10px 26px;
+  overflow: hidden;
 }
-.dash-spark__bar-wrap {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  height: 100%;
-  cursor: pointer;
-  gap: 4px;
-}
-.dash-spark__bar {
-  flex: 1;
+.dash-spark-svg {
   width: 100%;
-  background: linear-gradient(180deg, var(--color-primary), rgba(242,121,0,0.3));
-  border-radius: 4px 4px 0 0;
-  transition: opacity 0.15s ease;
-  min-height: 4px;
+  height: 110px;
+  display: block;
+  overflow: visible;
 }
-.dash-spark__bar-wrap:hover .dash-spark__bar { opacity: 0.7; }
-.dash-spark__lbl {
-  font-size: 9px;
+.dash-spark-svg__area {
+  opacity: 0;
+  animation: spark-fade 1.6s cubic-bezier(0.18, 0.89, 0.32, 1.28) 1s forwards;
+}
+.dash-spark-svg__line {
+  stroke-dasharray: 1500;
+  stroke-dashoffset: 1500;
+  animation: spark-draw 2.6s cubic-bezier(0.18, 0.89, 0.32, 1) 0.2s forwards;
+  filter: drop-shadow(0 2px 6px rgba(242,121,0,0.4));
+}
+.dash-spark-svg__pt {
+  opacity: 0;
+  animation: spark-dot 0.5s cubic-bezier(0.18, 0.89, 0.4, 1.4) forwards;
+}
+.dash-spark-svg__pt circle:first-child { transition: r 0.18s ease; }
+.dash-spark-svg__pt:hover circle:first-child { r: 5; }
+@keyframes spark-draw { to { stroke-dashoffset: 0; } }
+@keyframes spark-fade { to { opacity: 1; } }
+@keyframes spark-dot  { to { opacity: 1; } }
+
+.dash-spark-svg__labels {
+  position: absolute;
+  left: 10px; right: 10px;
+  bottom: 6px;
+  height: 12px;
+}
+.dash-spark-svg__labels span {
+  position: absolute;
+  transform: translateX(-50%);
+  font-size: 9.5px;
   color: var(--color-text-secondary);
+  white-space: nowrap;
 }
 
-/* Top dishes bars */
+.dash-spark__detail {
+  margin-top: 8px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  position: relative;
+  animation: detail-in 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+}
+@keyframes detail-in {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.dash-spark__detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 4px 0;
+  font-size: 13px;
+}
+.dash-spark__detail-close {
+  position: absolute;
+  top: 6px; right: 6px;
+  background: transparent;
+  color: var(--color-text-secondary);
+  border: none;
+  font-size: 11px;
+  cursor: pointer;
+  padding: 4px 6px;
+}
+
+/* Top dishes bars (animated) */
 .dash-top {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
@@ -2849,7 +2895,7 @@ body.no-scroll { overflow: hidden; }
   padding: 12px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 .dash-top__row {
   display: grid;
@@ -2857,7 +2903,16 @@ body.no-scroll { overflow: hidden; }
   align-items: center;
   gap: 10px;
   font-size: 12.5px;
+  background: transparent;
+  border: none;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+  color: var(--color-text);
+  transition: opacity 0.15s;
 }
+.dash-top__row:hover { opacity: 0.85; }
 .dash-top__name {
   color: var(--color-text);
   font-weight: 600;
@@ -2866,21 +2921,75 @@ body.no-scroll { overflow: hidden; }
   text-overflow: ellipsis;
 }
 .dash-top__bar {
-  height: 8px;
+  height: 10px;
   background: var(--color-bg);
-  border-radius: 4px;
+  border-radius: 6px;
   overflow: hidden;
 }
 .dash-top__bar > div {
   height: 100%;
+  width: 0;
   background: linear-gradient(90deg, var(--color-primary), #fbbf24);
-  border-radius: 4px;
-  transition: width 0.4s ease;
+  border-radius: 6px;
+  animation: top-grow 1.6s cubic-bezier(0.18, 0.89, 0.32, 1.05) forwards;
+  animation-delay: calc(var(--i) * 0.18s + 0.6s);
+  box-shadow: 0 0 8px rgba(242,121,0,0.4);
 }
+@keyframes top-grow { to { width: var(--w); } }
 .dash-top__qty {
   color: var(--color-primary);
   font-weight: 700;
 }
+
+/* Smart tip card */
+.dash-tip {
+  margin-top: 18px;
+  background: linear-gradient(160deg, rgba(96,165,250,0.08), rgba(242,121,0,0.04) 60%, var(--color-surface));
+  border: 1px solid rgba(96,165,250,0.3);
+  border-radius: var(--radius);
+  padding: 14px;
+}
+.dash-tip__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.dash-tip__bot { font-size: 20px; }
+.dash-tip__title {
+  font-size: 13px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #60a5fa;
+}
+.dash-tip__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.dash-tip__list li {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  font-size: 13px;
+  line-height: 1.4;
+  padding: 8px 10px;
+  background: rgba(0,0,0,0.2);
+  border-radius: 8px;
+  opacity: 0;
+  transform: translateY(8px);
+  animation: tip-in 0.5s ease-out forwards;
+}
+@keyframes tip-in {
+  to { opacity: 1; transform: translateY(0); }
+}
+.dash-tip__icon { font-size: 18px; flex: 0 0 22px; }
+.dash-tip__text { color: var(--color-text); }
+.dash-tip__text strong { color: var(--color-primary); }
 
 .dash-cta-stats {
   display: block;
